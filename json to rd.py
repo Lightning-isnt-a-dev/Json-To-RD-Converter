@@ -3,7 +3,7 @@ import os, sys
 
 #input("Please input the path of your json plugin: ")
 
-jsonpath = "c:/Users/lostl/Desktop/Coding/Python/own/Selene_To_The_Rogue_LAROI_ELECTRIFIED.json"
+jsonpath = input("Please input the path of your json plugin: ")
 
 if os.path.exists(jsonpath):
     x = json.load(open(jsonpath))
