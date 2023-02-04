@@ -1,4 +1,4 @@
-# Json-To-RD-converter-for-Saturn-Swapper
+# Json-To-RD-for-Saturn-Swapper
 Simple converter for saturn swapper
 
 
