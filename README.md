@@ -11,3 +11,5 @@ the .py
 SSPN.repl.exe (in the same folder as the py)
 
 Code might be a bit messy but it works.
+
+Report any issues through github or straight to me on discord. Lightning#2538
