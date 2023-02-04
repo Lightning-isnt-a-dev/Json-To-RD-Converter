@@ -3,7 +3,9 @@ Simple converter for saturn swapper
 
 
 things needed:
-.json plugin (*MUST USE "search" AND "replace" OR WONT WORK*)
+.json plugin (*THE JSON PLUGIN MUST USE "search" AND "replace" OR WONT WORK*)
+
+i will work on a fix for the problem
 
 the .py
 
