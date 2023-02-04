@@ -22,7 +22,7 @@ else:
 signs = [("Name","Name"), ("Swapicon","Icon"), ("Message", "Author")]
 
 print("Writing signs...")
-wfile = open(os.path.basename(jsonpath).split(".")[0] + ".txt", "w")
+wfile = open(os.path.basename(jsonpath).split(".")[0] + ".rd", "w")
 wfile.write("#file plugin\n")
 for sign, sign_name in signs:
     signing = ('sign: "%s", "%s"\n' % (sign_name, x[sign]))
