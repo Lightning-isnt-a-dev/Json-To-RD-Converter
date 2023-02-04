@@ -1,14 +1,14 @@
 import json
 import os, sys
 
+#str(input("Please input the path of your json plugin: ")) 
+
 jsonpath = input("Please input the path of your json plugin: ")
 
 if os.path.exists(jsonpath):
     x = json.load(open(jsonpath))
 else:
     print("Theres something wrong with your path. Try again.")
-
-#future fix for certain type of json
 
 #checksigns = ["Name", "default_name"]
 
@@ -62,26 +62,22 @@ wfile.close()
 
 
 print("We will now compile the plugin. Please note you need the SSPN.repl.exe in the same folder as the python file for this to work. Continue? Type yes or no.")
-q = input("").lower
-while q != "no" or q != "yes":
+q = input("").lower()
+while q != "yes" or q != "no":
     if q == "no":
         sys.exit()
     elif q == "yes":
         outputpath = input("Please input an output path for your plugin: ")
     else:
         print("You did something wrong. Please try again.")
+        sys.exit
 
 newpath = os.path.basename(jsonpath).split(".")[0] + ".rd"
 rdpath = os.path.dirname(jsonpath) + "/" + newpath
 
 if os.path.exists(outputpath) == True:
-    comm = 'cmd /k \"SSPN.repl.exe "%s" "%s"\"' % (outputpath, rdpath)
-    print(comm)
-    os.system(comm)
+    os.system('cmd /k \"SSPN.repl.exe "%s" "%s"\"' % (outputpath, rdpath))
 else:
     print("Something went wrong. Please try again.")
-
-
-
 
 print("Done!")
