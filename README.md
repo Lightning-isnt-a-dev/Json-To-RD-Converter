@@ -1,9 +1,6 @@
 # Json-To-RD-for-Saturn-Swapper
 Simple converter for saturn swapper
 
-
-!!nvm this shit doesnt work!!
-
 things needed:
 .json plugin (*THE JSON PLUGIN MUST USE "search" AND "replace" OR WONT WORK*)
 
