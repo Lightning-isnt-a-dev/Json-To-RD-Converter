@@ -1,7 +1,7 @@
 import json
 import os, sys
 
-#str(input("Please input the path of your json plugin: ")) 
+#input("Please input the path of your json plugin: ")
 
 jsonpath = input("Please input the path of your json plugin: ")
 
@@ -10,6 +10,8 @@ if os.path.exists(jsonpath):
 else:
     print("Theres something wrong with your path. Try again.")
 
+#for future json fix    
+    
 #checksigns = ["Name", "default_name"]
 
 #for sign in x:
@@ -29,15 +31,37 @@ for sign, sign_name in signs:
     wfile.write(signing)
 print("Wrote signs!")
 
-imports = [("AssetPath", "from_ar = import")]
-swapargs = [("search", "from_ar.Seek("), ("replace", "from_ar.Write<string>(")]
+pos = -1
+swapar = 0
+print("Writing imports and swaps...")
 
 for asset in x["Assets"]:
-    AssetPath = asset["AssetPath"]
-    print("Writing imports and swaps...")
-    for apath, importing in imports:
-        wimports = ('\n%s "%s" \n\n' % (importing, asset[apath]))
-        wfile.write(wimports)
+    try:
+        AssetPathTo = asset["AssetPathTo"]
+    except KeyError:
+        pathtoexists = False
+    else:
+        pathtoexists = True
+
+    if pathtoexists == True:
+        AssetPathTo = asset["AssetPathTo"]
+        AssetPath = asset["AssetPath"]
+        if swapar != 0:
+            wfile.write("from_ar.Swap(to_ar)\n\n")
+            toar = "\nto_ar = import \"" + AssetPathTo + "\" "
+            wfile.write(toar)
+            fromar = "\nfrom_ar = import \"" + AssetPath + "\" \n\n"
+            wfile.write(fromar)
+        else:
+            toar = "\nto_ar = import \"" + AssetPathTo + "\" "
+            wfile.write(toar)
+            fromar = "\nfrom_ar = import \"" + AssetPath + "\" \n\n"
+            wfile.write(fromar)
+            swapar +=1
+    elif pathtoexists == False:
+        AssetPath = asset["AssetPath"]
+        fromar = "from_ar = import \"" + AssetPath + "\" \n"
+        wfile.write(fromar)
 
     swaps = asset["Swaps"]
     swaps_sorted = sorted(swaps, key=lambda d: len(d['replace']), reverse=True)
@@ -47,37 +71,47 @@ for asset in x["Assets"]:
         if replacestring == "/":
             wstring = "/"
         else:
-            wstring = os.path.basename(replacestring).split(".")[0]
-        sstring = os.path.basename(searchstring).split(".")[0]
+            wstring = os.path.basename(replacestring).split(".")[1]
+            wstringlong = os.path.basename(replacestring).split(".")[0]
+        sstring = os.path.basename(searchstring).split(".")[1]
+        sstringlong = os.path.basename(searchstring).split(".")[0]
 
-        dirandstring = os.path.dirname(searchstring) + "/" + sstring
-        dirandwrite = os.path.dirname(replacestring) + "/" + wstring
+        dirandstring = os.path.dirname(searchstring) + "/" + sstringlong
+        dirandwrite = os.path.dirname(replacestring) + "/" + wstringlong
 
-        wfile.write("from_ar.Seek(\"" + dirandstring + "\")" + "\n")
-        wfile.write("from_ar.Write<string>(\"" + dirandwrite + "\")" + "\n\n")
+        if pathtoexists == True:
+            wfile.write("to_ar.Seek(\"" + dirandstring + "\")" + "\n")
+            wfile.write("to_ar.Write<string>(\"" + dirandwrite + "\")" + "\n\n")
 
-        wfile.write("from_ar.Seek(\"" + sstring + "\")" + "\n")
-        wfile.write("from_ar.Write<string>(\"" + wstring + "\")" + "\n\n")
+            wfile.write("to_ar.Seek(\"" + sstring + "\")" + "\n")
+            wfile.write("to_ar.Write<string>(\"" + wstring + "\")" + "\n\n")
+        elif pathtoexists == False:
+            wfile.write("from_ar.Seek(\"" + dirandstring + "\")" + "\n")
+            wfile.write("from_ar.Write<string>(\"" + dirandwrite + "\")" + "\n\n")
+
+            wfile.write("from_ar.Seek(\"" + sstring + "\")" + "\n")
+            wfile.write("from_ar.Write<string>(\"" + wstring + "\")" + "\n\n")
+print("Wrote imports and swaps!")
+
+
+newpath = os.path.basename(jsonpath).split(".")[0] + ".rd"
+rdpath = os.path.dirname(jsonpath) + "/" + newpath
+
+with open(rdpath, "a") as appending:
+    appending.write("from_ar.Swap(to_ar)")
+    appending.close()
 wfile.close()
 
-
 print("We will now compile the plugin. Please note you need the SSPN.repl.exe in the same folder as the python file for this to work. Continue? Type yes or no.")
+
 q = input("").lower()
 while q != "yes" or q != "no":
     if q == "no":
         sys.exit()
     elif q == "yes":
-        outputpath = input("Please input an output path for your plugin: ")
+        os.system('cmd /k \"SSPN.repl.exe "%%localappdata%%/saturn/plugins"  "%s"\"' % (rdpath))
+        print("Done compiling! The compiled plugin has been automatically put into your plugins folder.")
+        sys.exit
     else:
         print("You did something wrong. Please try again.")
         sys.exit
-
-newpath = os.path.basename(jsonpath).split(".")[0] + ".rd"
-rdpath = os.path.dirname(jsonpath) + "/" + newpath
-
-if os.path.exists(outputpath) == True:
-    os.system('cmd /k \"SSPN.repl.exe "%s" "%s"\"' % (outputpath, rdpath))
-else:
-    print("Something went wrong. Please try again.")
-
-print("Done!")
