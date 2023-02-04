@@ -3,15 +3,13 @@ import os, sys
 
 #input("Please input the path of your json plugin: ")
 
-jsonpath = input("Please input the path of your json plugin: ")
+jsonpath = "c:/Users/lostl/Desktop/Coding/Python/own/Selene_To_The_Rogue_LAROI_ELECTRIFIED.json"
 
 if os.path.exists(jsonpath):
     x = json.load(open(jsonpath))
 else:
     print("Theres something wrong with your path. Try again.")
 
-#for future json fix    
-    
 #checksigns = ["Name", "default_name"]
 
 #for sign in x:
@@ -31,7 +29,6 @@ for sign, sign_name in signs:
     wfile.write(signing)
 print("Wrote signs!")
 
-pos = -1
 swapar = 0
 print("Writing imports and swaps...")
 
@@ -57,7 +54,7 @@ for asset in x["Assets"]:
             wfile.write(toar)
             fromar = "\nfrom_ar = import \"" + AssetPath + "\" \n\n"
             wfile.write(fromar)
-            swapar +=1
+            swapar = 1
     elif pathtoexists == False:
         AssetPath = asset["AssetPath"]
         fromar = "from_ar = import \"" + AssetPath + "\" \n"
@@ -97,10 +94,13 @@ print("Wrote imports and swaps!")
 newpath = os.path.basename(jsonpath).split(".")[0] + ".rd"
 rdpath = os.path.dirname(jsonpath) + "/" + newpath
 
-with open(rdpath, "a") as appending:
-    appending.write("from_ar.Swap(to_ar)")
-    appending.close()
+print(rdpath)
+
 wfile.close()
+
+with open(rdpath, "a") as appending:
+    appending.write("from_ar.Swap(to_ar)\n")
+    appending.flush()
 
 print("We will now compile the plugin. Please note you need the SSPN.repl.exe in the same folder as the python file for this to work. Continue? Type yes or no.")
 
