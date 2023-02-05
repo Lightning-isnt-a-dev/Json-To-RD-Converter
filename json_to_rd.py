@@ -8,7 +8,7 @@ jsonpath = input("Please input the path of your json plugin: ")
 if os.path.exists(jsonpath):
     try :
         x = json.load(open(jsonpath, encoding='utf-8'))
-    except UnicodeDecodeError:
+    except Exception:
         sys.exit('Oops! Something happened. Report the error on github or to me on discord: Lightning#2538')
 else:
     print("Theres something wrong with your path. Try again.")
@@ -96,7 +96,9 @@ for asset in difjsonassets:
                 replacestring = swap["replace"]
                 if replacestring == "/":
                     wstring = "/"
-                elif replacestring.__contains__("Base"):
+                elif os.path.dirname(replacestring).__contains__("Base") and os.path.basename(replacestring).__contains__("Skeleton") or os.path.basename(replacestring).__contains__("Fortnite_M_Avg_Player"):
+                    print(os.path.dirname(replacestring))
+                    print(os.path.basename(replacestring))
                     break
                 else:
                     wstring = os.path.basename(replacestring).split(".")[1]
