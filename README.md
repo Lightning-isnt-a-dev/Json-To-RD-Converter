@@ -17,5 +17,5 @@ i am working on a fix for the problem
 
 
 
-#Feedback and Help
+# Feedback and Help
 Report any issues through github or straight to me on discord. Lightning#2538
