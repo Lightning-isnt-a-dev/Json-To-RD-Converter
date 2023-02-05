@@ -6,7 +6,7 @@ Join the discord <a href="https://discord.gg/saturn">here</a>
 
 
 
-<h2><u>things needed:</u></h2>
+<h2><u>Things needed:</u></h2>
 
 <ul>
   <li title="I am working on a fix for the problem.">.json plugin (*THE JSON PLUGIN MUST USE "search" AND "replace" OR WONT WORK*)</li>
