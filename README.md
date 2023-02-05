@@ -6,13 +6,12 @@ Join the discord <a href="https://discord.gg/saturn">here</a>
 
 
 
-<h4><u>things needed:</u></h4>
+<h2><u>things needed:</u></h2>
 
 <ul>
-<li>.json plugin (*THE JSON PLUGIN MUST USE "search" AND "replace" OR WONT WORK*)</li>
-I am working on a fix for the problem.
-<li>the .py</li>
-<li>SSPN.repl.exe (in the same folder as the py)</li>
+  <li><title="<i>I am working on a fix for the problem.</i>">.json plugin (*THE JSON PLUGIN MUST USE "search" AND "replace" OR WONT WORK*)</title></li>
+  <li>the .py</li>
+  <li>SSPN.repl.exe (in the same folder as the py)</li>
 </ul>
 
 
