@@ -96,6 +96,8 @@ for asset in difjsonassets:
                 replacestring = swap["replace"]
                 if replacestring == "/":
                     wstring = "/"
+                elif replacestring.__contains__("Base"):
+                    break
                 else:
                     wstring = os.path.basename(replacestring).split(".")[1]
                     wstringlong = os.path.basename(replacestring).split(".")[0]
