@@ -124,8 +124,8 @@ if __name__ == "__main__":
     if not jsonpaths:
         jsonpath = input("Please input the paths of your json plugins: ")
         #FOR TESTING/MULTIPLE SWAPS (the name cant have any spaces)
-        jsonpaths.extend(jsonpath.split(" "))
-        #jsonpaths.append(jsonpath)
+        #jsonpaths.extend(jsonpath.split(" "))
+        jsonpaths.append(jsonpath)
 
     for jsonpath in jsonpaths:
         rdpaths.append(json_to_rd(jsonpath))
