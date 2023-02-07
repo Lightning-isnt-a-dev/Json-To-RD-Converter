@@ -1,6 +1,10 @@
 import json
 import os, sys
 
+def masterskeletalnull(replacestring):
+    if "Base" in os.path.dirname(replacestring) and ("Skeleton" in os.path.basename(replacestring) or "Fortnite_M_Avg_Player" in os.path.basename(replacestring)):
+        return True
+
 def seekwrite(pathtoexists, wfile, inpa, inpb):
     if inpb == "/":
         wstring = "/"
@@ -77,9 +81,9 @@ def json_to_rd(jsonpath):
             pathtoexists = False
             
         if pathtoexists == True:
-            fromar = "\nfrom_ar = import \"" + AssetPath + "\" \n\n"
+            fromar = "\nfrom_ar = import \"" + AssetPath + "\""
             wfile.write(fromar)
-            toar = "\nto_ar = import \"" + AssetPathTo + "\" "
+            toar = "\nto_ar = import \"" + AssetPathTo + "\" \n\n"
             wfile.write(toar)
         elif pathtoexists == False:
             fromar = "\nfrom_ar = import \"" + AssetPath + "\" \n\n"
@@ -89,31 +93,22 @@ def json_to_rd(jsonpath):
             swaps = asset["Swaps"]
         except KeyError:
             swaps = asset["swaps"]
+
         if swaps is None:
             wfile.write("\n\nfrom_ar.Swap(to_ar)\n\n")
             continue
-            
+
+        swap_items = []
         if difjson == True:
-            listofswaps = []
-            for key, value in swaps.items():                    
-                listofswaps.append((key, value))
-            swaps_sorted = sorted(listofswaps, key=lambda d: len(d[1]), reverse=True)
-            for searchstring, replacestring in swaps_sorted:
-                if "Base" in os.path.dirname(replacestring) and ("Skeleton" in os.path.basename(replacestring) or "Fortnite_M_Avg_Player" in os.path.basename(replacestring)):
-                    break
-                else:
-                    seekwrite(pathtoexists, wfile, searchstring, replacestring)
+            swap_items = swaps.items()
         elif difjson == False:
-            swaps_sorted = sorted(swaps, key=lambda d: len(d['replace']), reverse=True)
-            for swap in swaps_sorted:
-                searchstring = swap["search"]
-                replacestring = swap["replace"]
-                if "Base" in os.path.dirname(replacestring) and ("Skeleton" in os.path.basename(replacestring) or "Fortnite_M_Avg_Player" in os.path.basename(replacestring)):
-                    break
-                else:
-                    seekwrite(pathtoexists, wfile, searchstring, replacestring)
-        if pathtoexists is True:
-            wfile.write("from_ar.Swap(to_ar)\n\n")
+            swap_items = [(swap["search"], swap["replace"]) for swap in swaps]
+        
+        swaps_sorted = sorted(swap_items, key=lambda d: len(d[1]), reverse=True)
+
+        for searchstring, replacestring in swaps_sorted:
+            if not masterskeletalnull(replacestring):
+                seekwrite(pathtoexists, wfile, searchstring, replacestring)
 
     print("Wrote imports and swaps!")
     wfile.close()
@@ -128,14 +123,14 @@ if __name__ == "__main__":
     rdpaths = []
     if not jsonpaths:
         jsonpath = input("Please input the paths of your json plugins: ")
-        #FOR TESTING
-        #jsonpaths.extend(jsonpath.split(" "))
-        jsonpaths.append(jsonpath)
+        #FOR TESTING/MULTIPLE SWAPS (the name cant have any spaces)
+        jsonpaths.extend(jsonpath.split(" "))
+        #jsonpaths.append(jsonpath)
 
     for jsonpath in jsonpaths:
         rdpaths.append(json_to_rd(jsonpath))
 
-    ans = input("Would you like to compile all the plugins?. Please note you need the SSPN.repl.exe in the same folder as the python file for this to work. Type yes or no.\n").lower()
+    ans = input("Would you like to compile the plugin?. Please note you need the SSPN.repl.exe in the same folder as the python file for this to work. Type yes or no.\n").lower()
     if ans == "yes":
         for rd in rdpaths:
             rd_to_csp(rd)
