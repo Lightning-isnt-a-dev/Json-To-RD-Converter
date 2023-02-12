@@ -1,30 +1,35 @@
 import json
 import os, sys
 
-def masterskeletalnull(replacestring):
-    if "Base" in os.path.dirname(replacestring) and ("Skeleton" in os.path.basename(replacestring) or "Fortnite_M_Avg_Player" in os.path.basename(replacestring)):
-        return True
+#def masterskeletalnull(replacestring):
+    #if "Base" in os.path.dirname(replacestring) and ("Skeleton" in os.path.basename(replacestring) or "Fortnite_M_Avg_Player" in os.path.basename(replacestring)):
+        #return True
 
 def seekwrite(pathtoexists, wfile, inpa, inpb):
-    if inpb == "/":
+    if "Game" not in os.path.dirname(inpb):
         wstring = "/"
+        dirandwrite = "/"
     else:
         wstring = os.path.basename(inpb).split(".")[1]
-    wstringlong = os.path.basename(inpb).split(".")[0]
-    dirandwrite = os.path.dirname(inpb) + "/" + wstringlong
+        wstringlong = os.path.basename(inpb).split(".")[0]
+        dirandwrite = os.path.dirname(inpb) + "/" + wstringlong
 
-    sstring = os.path.basename(inpa).split(".")[1]
-    sstringlong = os.path.basename(inpa).split(".")[0]
-    dirandstring = os.path.dirname(inpa) + "/" + sstringlong
+    if inpa == "CustomCharacterFaceData":
+        testskip = True
+    else:
+        sstring = os.path.basename(inpa).split(".")[1]
+        sstringlong = os.path.basename(inpa).split(".")[0]
+        dirandstring = os.path.dirname(inpa) + "/" + sstringlong
+        testskip = False
     
 
-    if pathtoexists == True:
+    if pathtoexists == True and testskip is False:
         wfile.write("to_ar.Seek(\"" + dirandstring + "\")" + "\n")
         wfile.write("to_ar.Write<string>(\"" + dirandwrite + "\")" + "\n\n")
 
         wfile.write("to_ar.Seek(\"" + sstring + "\")" + "\n")
         wfile.write("to_ar.Write<string>(\"" + wstring + "\")" + "\n\n")
-    elif pathtoexists == False:
+    elif pathtoexists == False and testskip is False:
             wfile.write("from_ar.Seek(\"" + dirandstring + "\")" + "\n")
             wfile.write("from_ar.Write<string>(\"" + dirandwrite + "\")" + "\n\n")
 
@@ -44,17 +49,15 @@ def json_to_rd(jsonpath):
 
 
 
-    while True:
-        try:
-            x["Name"]
-        except KeyError:
-            signs = [("swapped_name","Name"), ("default_icon","Icon"), ("messages", "Author")]
-            difjson = True
-            break
-        else:
-            signs = [("Name","Name"), ("Swapicon","Icon"), ("Message", "Author")]
-            difjson = False
-            break
+
+    try:
+        x["Name"]
+    except KeyError:
+        signs = [("default_name","Name"), ("swapped_icon","Icon"), ("messages", "Author")]
+        difjson = True
+    else:
+        signs = [("Name","Name"), ("Swapicon","Icon"), ("Message", "Author")]
+        difjson = False
 
     print("Writing signs...")
     rdpath = os.path.basename(jsonpath).split(".")[0] + ".rd"
@@ -107,9 +110,9 @@ def json_to_rd(jsonpath):
         swaps_sorted = sorted(swap_items, key=lambda d: len(d[1]), reverse=True)
 
         for searchstring, replacestring in swaps_sorted:
-            if not masterskeletalnull(replacestring):
+            #if not masterskeletalnull(replacestring):
                 seekwrite(pathtoexists, wfile, searchstring, replacestring)
-
+        wfile.write("\n\nfrom_ar.Swap(to_ar)\n\n")
     print("Wrote imports and swaps!")
     wfile.close()
     return rdpath
@@ -128,7 +131,8 @@ if __name__ == "__main__":
         jsonpaths.append(jsonpath)
 
     for jsonpath in jsonpaths:
-        rdpaths.append(json_to_rd(jsonpath))
+        json_to_rd(jsonpath)
+        rdpaths.append(jsonpath)
 
     ans = input("Would you like to compile the plugin?. Please note you need the SSPN.repl.exe in the same folder as the python file for this to work. Type yes or no.\n").lower()
     if ans == "yes":
