@@ -1,5 +1,8 @@
 import json
-import os, sys
+import os
+import sys
+
+
 
 #def masterskeletalnull(replacestring):
     #if "Base" in os.path.dirname(replacestring) and ("Skeleton" in os.path.basename(replacestring) or "Fortnite_M_Avg_Player" in os.path.basename(replacestring)):
@@ -39,13 +42,30 @@ def seekwrite(pathtoexists, wfile, inpa, inpb):
 def json_to_rd(jsonpath):
 
     if os.path.exists(jsonpath):
-        try :
+        try:
             x = json.load(open(jsonpath, encoding='utf-8'))
-        except Exception:
-            sys.exit('Oops! Something happened. Report the error on github or to me on discord: Lightning#2538')
+        except json.decoder.JSONDecodeError:
+            try:
+                #using yaml cause json doesnt like the extra comma in some plugins
+                import yaml
+                #if there are tabs, remove them because yaml doesnt like them
+                yamlread = open(jsonpath, encoding='utf-8').read()
+                yamlread = yamlread.replace("\t", "")
+                x = yaml.safe_load(yamlread)
+            except ModuleNotFoundError:
+                yamlins = input("Would you like to install YAML? This is required for the plugin you want to convert. (yes or no)").lower()
+                if yamlins == "no":
+                    sys.exit("Exiting!")
+                elif yamlins == "yes":
+                    os.system('py -m pip install --upgrade pip')
+                    os.system('pip install pyyaml')
+                    sys.exit("Installed YAML! Please reopen the py.")
+                else: 
+                    sys.exit("You did something wrong. Exiting.")
+    elif not os.path.exists(jsonpath):
+        print("Path is wrong! Make sure your plugin is in the same folder as the python file.")
     else:
-        print("Theres something wrong with your path. Try again.")
-        sys.exit()
+        sys.exit('Oops! Something happened. Report the error on github or to me on discord: Lightning#2538')
 
 
 
@@ -112,32 +132,39 @@ def json_to_rd(jsonpath):
         for searchstring, replacestring in swaps_sorted:
             #if not masterskeletalnull(replacestring):
                 seekwrite(pathtoexists, wfile, searchstring, replacestring)
-        wfile.write("\n\nfrom_ar.Swap(to_ar)\n\n")
+        if pathtoexists is True:
+            wfile.write("\n\nfrom_ar.Swap(to_ar)\n\n")
     print("Wrote imports and swaps!")
     wfile.close()
     return rdpath
 
-def rd_to_csp(rd): 
+def rd_to_csp(rd):
     os.system('cmd /k \"SSPN.repl.exe "%%localappdata%%/saturn/plugins"  "%s"\"' % (rd))
 
-#listoftests BrilliantBomber.json default_axe_to_stellar_axe.json Selene_To_The_Rogue_LAROI_ELECTRIFIED.json Sludgehammer_To_Candy_Axe.json
+#listoftests BrilliantBomber.json default_axe_to_stellar_axe.json Selene_To_The_Rogue_LAROI_ELECTRIFIED.json Sludgehammer_To_Candy_Axe.json BoogieDownToGetGriddy.json
 if __name__ == "__main__":
     jsonpaths = sys.argv[1:]
-    rdpaths = []
     if not jsonpaths:
         jsonpath = input("Please input the paths of your json plugins: ")
         #FOR TESTING/MULTIPLE SWAPS (the name cant have any spaces)
         #jsonpaths.extend(jsonpath.split(" "))
         jsonpaths.append(jsonpath)
-
+    
     for jsonpath in jsonpaths:
         json_to_rd(jsonpath)
-        rdpaths.append(jsonpath)
-
-    ans = input("Would you like to compile the plugin?. Please note you need the SSPN.repl.exe in the same folder as the python file for this to work. Type yes or no.\n").lower()
-    if ans == "yes":
-        for rd in rdpaths:
-            rd_to_csp(rd)
-        print("Done compiling! The compiled plugins have been automatically put into your plugins folder.")
-
+    
+    ans = input("Would you like to compile the plugin? The compiler will be downloaded if not found. Type yes or no.\n").lower()
+    while True:
+        if ans == "yes":
+            if not os.path.exists("SSPN.Repl.exe"):
+                print("Complier not found! Downloading compiler...")
+                os.system('powershell -Command "wget -O SSPN.Repl.exe https://cdn.discordapp.com/attachments/754879989614379042/1066474314695721060/SSPN.Repl.exe"')
+            rdpath = os.path.basename(jsonpath).split(".")[0] + ".rd"
+            rd_to_csp(rdpath)
+            print("Done compiling! The compiled plugins have been automatically put into your plugins folder.")
+            break
+        elif ans == "no":
+            break
+        else:
+            print("You typed something other than yes or no. Please try again.")      
     sys.exit(0)
