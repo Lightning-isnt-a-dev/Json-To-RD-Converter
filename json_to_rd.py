@@ -10,19 +10,17 @@ import sys
 
 def seekwrite(pathtoexists, wfile, inpa, inpb):
     if "Game" not in os.path.dirname(inpb):
-        wstring = "/"
+        #wstring = "/"
         dirandwrite = "/"
     else:
-        wstring = os.path.basename(inpb).split(".")[1]
-        wstringlong = os.path.basename(inpb).split(".")[0]
-        dirandwrite = os.path.dirname(inpb) + "/" + wstringlong
+        #wstring = os.path.basename(inpb).split(".")[1]
+        dirandwrite = os.path.dirname(inpb) + "/" + os.path.basename(inpb) #.split(".")[0]
 
     if inpa == "CustomCharacterFaceData":
         testskip = True
     else:
-        sstring = os.path.basename(inpa).split(".")[1]
-        sstringlong = os.path.basename(inpa).split(".")[0]
-        dirandstring = os.path.dirname(inpa) + "/" + sstringlong
+        #sstring = os.path.basename(inpa).split(".")[1]
+        dirandstring = os.path.dirname(inpa) + "/" + os.path.basename(inpa) #.split(".")[0]
         testskip = False
     
 
@@ -30,14 +28,14 @@ def seekwrite(pathtoexists, wfile, inpa, inpb):
         wfile.write("to_ar.Seek(\"" + dirandstring + "\")" + "\n")
         wfile.write("to_ar.Write<string>(\"" + dirandwrite + "\")" + "\n\n")
 
-        wfile.write("to_ar.Seek(\"" + sstring + "\")" + "\n")
-        wfile.write("to_ar.Write<string>(\"" + wstring + "\")" + "\n\n")
+        #wfile.write("to_ar.Seek(\"" + sstring + "\")" + "\n")
+        #wfile.write("to_ar.Write<string>(\"" + wstring + "\")" + "\n\n")
     elif pathtoexists == False and testskip is False:
             wfile.write("from_ar.Seek(\"" + dirandstring + "\")" + "\n")
             wfile.write("from_ar.Write<string>(\"" + dirandwrite + "\")" + "\n\n")
 
-            wfile.write("from_ar.Seek(\"" + sstring + "\")" + "\n")
-            wfile.write("from_ar.Write<string>(\"" + wstring + "\")" + "\n\n")
+            #wfile.write("from_ar.Seek(\"" + sstring + "\")" + "\n")
+            #wfile.write("from_ar.Write<string>(\"" + wstring + "\")" + "\n\n")
 
 def json_to_rd(jsonpath):
 
@@ -139,7 +137,7 @@ def json_to_rd(jsonpath):
     return rdpath
 
 def rd_to_csp(rd):
-    os.system('cmd /k \"SSPN.repl.exe "%%localappdata%%/saturn/plugins"  "%s"\"' % (rd))
+    os.system('SSPN.repl.exe "%%localappdata%%/saturn/plugins"  "%s"' % (rd))
 
 #listoftests BrilliantBomber.json default_axe_to_stellar_axe.json Selene_To_The_Rogue_LAROI_ELECTRIFIED.json Sludgehammer_To_Candy_Axe.json BoogieDownToGetGriddy.json
 if __name__ == "__main__":
@@ -158,10 +156,10 @@ if __name__ == "__main__":
         if ans == "yes":
             if not os.path.exists("SSPN.Repl.exe"):
                 print("Complier not found! Downloading compiler...")
-                os.system('powershell -Command "wget -O SSPN.Repl.exe https://cdn.discordapp.com/attachments/754879989614379042/1066474314695721060/SSPN.Repl.exe"')
+                os.system('powershell -Command "wget -O SSPN.Repl.exe https://cdn.discordapp.com/attachments/1078667568082071623/1079002439866388480/SSPN.Repl.exe"')
             rdpath = os.path.basename(jsonpath).split(".")[0] + ".rd"
             rd_to_csp(rdpath)
-            print("Done compiling! The compiled plugins have been automatically put into your plugins folder.")
+            print("Done compiling! The compiled plugin has been automatically put into your plugins folder.")
             break
         elif ans == "no":
             break
