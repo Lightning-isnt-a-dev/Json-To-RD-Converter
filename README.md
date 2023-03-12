@@ -10,8 +10,8 @@ Join the discord <a href="https://discord.gg/saturn">here</a>
 
 <ul>
   <li>a .json plugin</li>
-  <li>the .py</li>
-  <li>SSPN.repl.exe (in the same folder as the py)</li>
+  <li>the .py (or exe, preferrably the exe)</li>
+  <li>SSPN.repl.exe (will be downloaded if not found)</li>
 </ul>
 
 
