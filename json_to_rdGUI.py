@@ -1,5 +1,5 @@
 import json, yaml
-import os
+import os, time
 import tkinter, customtkinter
 import subprocess as sp
 import easygui
@@ -122,8 +122,13 @@ def json_to_rd(jsonpath):
 
 def rd_to_csp(rd):
     if os.path.exists(rd):
-        sp.Popen('SSPN.repl.exe "%%localappdata%%/saturn/plugins"  "%s"' % (rd), shell=True)
-        done.configure(text="Done compiling!", text_color="white")
+        if os.path.exists("SSPN.Repl.exe"):
+            sp.Popen('SSPN.repl.exe "%%localappdata%%/saturn/plugins"  "%s"' % (rd), shell=True)
+            done.configure(text="Done compiling!", text_color="white")
+        elif not os.path.exists("SSPN.Repl.exe"):
+            done.configure(text="Compiler not found! Downloading compiler...", text_color="red")
+            sp.Popen('powershell -Command "wget -O SSPN.Repl.exe https://cdn.discordapp.com/attachments/1078667568082071623/1079002439866388480/SSPN.Repl.exe"', shell=True)
+            done.configure(text="Compiler downloaded! Please press the button again.", text_color="white")
     else:
         done.configure(text="Please convert your json first.", text_color="red")
 
