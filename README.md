@@ -1,6 +1,6 @@
 # Json-To-RD-for-Saturn-Swapper
 
-<p>Simple converter for saturn swapper </br> Code is more spaghetti than Destiny 2's code</p>
+<p>Simple converter for saturn swapper</p>
 
 Join the discord <a href="https://discord.gg/saturn">here</a>
 
