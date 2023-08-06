@@ -2,7 +2,7 @@
 
 <p>Simple converter for saturn swapper</p>
 
-Join the discord <a href="https://discord.gg/saturn">here</a>
+Join the discord <a href="https://discord.gg/saturnswapper">here</a>
 
 
 
