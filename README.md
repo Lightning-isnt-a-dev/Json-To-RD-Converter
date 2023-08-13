@@ -10,7 +10,7 @@ Join the discord <a href="https://discord.gg/saturnswapper">here</a>
 
 <ul>
   <li>a .json plugin</li>
-  <li>the .py (or exe, preferrably the exe)</li>
+  <li>the .py (or exe, preferably the exe)</li>
   <li>SSPN.repl.exe (will be downloaded if not found)</li>
 </ul>
 
