@@ -1,11 +1,31 @@
-import json, yaml
+import yaml
 import os, sys
 import tkinter, customtkinter
 import subprocess as sp
 import easygui
+import threading as mp
+import shutil
+import requests
 from PIL import Image
 
 #installed with pip: easygui, customtkinter, pyyaml, pillow
+
+
+
+#listoftests BrilliantBomber.json default_axe_to_stellar_axe.json Selene_To_The_Rogue_LAROI_ELECTRIFIED.json Sludgehammer_To_Candy_Axe.json BoogieDownToGetGriddy.json
+
+
+#def masterskeletalnull(replacestring):
+    #if "Base" in os.path.dirname(replacestring) and ("Skeleton" in os.path.basename(replacestring) or "Fortnite_M_Avg_Player" in os.path.basename(replacestring)):
+        #return True
+
+
+def multiprocess(func, arg):
+    if arg == None:
+        proc = mp.Thread(target=func)
+    else:
+        proc = mp.Thread(target=func, args=(arg,))
+    proc.start()
 
 def resource_path(relative_path):
     try:
@@ -14,79 +34,168 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-#def masterskeletalnull(replacestring):
-    #if "Base" in os.path.dirname(replacestring) and ("Skeleton" in os.path.basename(replacestring) or "Fortnite_M_Avg_Player" in os.path.basename(replacestring)):
-        #return True
+def selectall():
+    autodowncompiler.select()
+    autocompile.select()
+    autodelrd.select()
+    autodeljson.select()
 
-def seekwrite(pathtoexists, wfile, inpa, inpb):
-    if "Game" not in os.path.dirname(inpb):
-        #wstring = "/"
-        dirandwrite = "/"
-    else:
-        #wstring = os.path.basename(inpb).split(".")[1]
-        dirandwrite = os.path.dirname(inpb) + "/" + os.path.basename(inpb) #.split(".")[0]
+def deselectall():
+    autodowncompiler.deselect()
+    autocompile.deselect()
+    autodelrd.deselect()
+    autodeljson.deselect()
 
-    if inpa == "CustomCharacterFaceData":
-        testskip = True
+def toggleall():
+    if automateall.get() == 1:
+        selectall()
+    elif automateall.get() == 0:
+        deselectall()
+
+def pack():
+    autodowncompiler.pack(side="bottom", pady="10")
+    autocompile.pack(side="bottom", pady="10")
+    autodelrd.pack(side="bottom", pady="10")
+    autodeljson.pack(side="bottom", pady="10")
+
+def forget():
+    autocompile.forget()
+    autodowncompiler.forget()
+    autodelrd.forget()
+    autodeljson.forget()
+
+def showoptions():
+    if options.cget("image") == options1:
+
+        options.configure(image=options2)
+
+        pack()
+
+        if automateall.get() == 1:
+            selectall()
+        elif automateall.get() == 0:
+            deselectall
+        
+        app.geometry("550x450")
+
+    elif options.cget("image") == options2:
+        options.configure(image=options1)
+
+        checkboxframe2.configure(height=10)
+        
+        forget()
+
+        app.geometry("550x275")
+
+def downloadables(x, wfile):
+    wfile.write("\n\n")
+    for k, v in list(x["Downloadables"][0].items()):
+        if k == "backup":
+           continue
+        wfile.write("system.Download(\"" + v + "\", " + f"\"{k}" + "\");\n")
+    wfile.write("\n")
+
+def seekwrite(pathtoexists, wfile, seekin, writein, downloads):
+    if seekin == "CustomCharacterFaceData" or " " in writein:
+        return
+    elif "Game" not in os.path.dirname(writein) and "BRCosmetics" not in os.path.dirname(writein) and downloads == False:
+        writeout = "/"
     else:
-        #sstring = os.path.basename(inpa).split(".")[1]
-        dirandstring = os.path.dirname(inpa) + "/" + os.path.basename(inpa) #.split(".")[0]
-        testskip = False
+        writeout = os.path.dirname(writein) + "/" + os.path.basename(writein)
+
+    seekout = os.path.dirname(seekin) + "/" + os.path.basename(seekin)
+
+    if pathtoexists:
+        wfile.write("search = to.CreateSoftObjectProperty(\"" + seekout + "\")" + ";" + "\n")
+        wfile.write("replace = to.CreateSoftObjectProperty(\"" + writeout + "\")" + ";" + "\n")
+        wfile.write("to.SwapSoftObjectProperty(search, replace);\n\n")
+
+    elif not pathtoexists:
+        wfile.write("search = from.CreateSoftObjectProperty(\"" + seekout + "\")" + ";" + "\n")
+        wfile.write("replace = from.CreateSoftObjectProperty(\"" + writeout + "\")" + ";" + "\n")
+        wfile.write("from.SwapSoftObjectProperty(search, replace);\n\n")
+        
+
+def json_to_rd(jsonpath):
+    if not os.path.exists(pathfielddata.get()):
+        return
     
+    if not os.path.exists(jsonpath):
+        header.configure("Invalid JSON path.", text_color="red")
+        return
+    #using yaml cause json doesnt like the extra comma in some plugins
+    #if there are tabs, remove them because yaml doesnt like them
 
-    if pathtoexists == True and testskip is False:
-        wfile.write("to_ar.Seek(\"" + dirandstring + "\")" + "\n")
-        wfile.write("to_ar.Write<string>(\"" + dirandwrite + "\")" + "\n\n")
-
-        #wfile.write("to_ar.Seek(\"" + sstring + "\")" + "\n")
-        #wfile.write("to_ar.Write<string>(\"" + wstring + "\")" + "\n\n")
-    elif pathtoexists == False and testskip is False:
-            wfile.write("from_ar.Seek(\"" + dirandstring + "\")" + "\n")
-            wfile.write("from_ar.Write<string>(\"" + dirandwrite + "\")" + "\n\n")
-
-            #wfile.write("from_ar.Seek(\"" + sstring + "\")" + "\n")
-            #wfile.write("from_ar.Write<string>(\"" + wstring + "\")" + "\n\n")
-
-def json_to_rd(jsonpath, done):
-    if os.path.exists(jsonpath):
+        #try decrypting
+    try:
+        yamlread = open(jsonpath, encoding='utf-8').read()
+        yamlread = yamlread.replace("\t", "    ")
+        x = yaml.safe_load(yamlread)
+        x["Name"]
+    except:
         try:
-            x = json.load(open(jsonpath, encoding='utf-8'))
-        except json.decoder.JSONDecodeError:
-            #using yaml cause json doesnt like the extra comma in some plugins
-            #if there are tabs, remove them because yaml doesnt like them
-            yamlread = open(jsonpath, encoding='utf-8').read()
-            yamlread = yamlread.replace("\t", "")
+            x["default_name"]
+        except TypeError:
+            yamlread = sp.run("%s %s" % (resource_path('resources\\deob\\galaxy_deobfuscator.exe'), jsonpath), capture_output=True, text=True)
+            yamlread = yamlread.stdout.replace("\t", "    ")
             x = yaml.safe_load(yamlread)
-    elif not os.path.exists(jsonpath):
-        done.configure("Path is wrong! Make sure your plugin is in the same folder as the python file.", text_color="red")
-    else:
-        done.configure('Oops! Something happened. Report the error on github or to me on discord: Lightning#2538', text_color="red")
+
+
+    #check for the type of json
     try:
         x["Name"]
-    except KeyError:
-        signs = [("default_name","Name"), ("swapped_icon","Icon"), ("messages", "Author")]
-        difjson = True
-    else:
+        x["Swapicon"]
         signs = [("Name","Name"), ("Swapicon","Icon"), ("Message", "Author")]
         difjson = False
+    except KeyError:
+        try:
+            signs = [("default_name","Name"), ("swapped_icon","Icon"), ("messages", "Author")]
+            difjson = True
+        except KeyError:
+            signs = [("Name","Name"), ("Icon","Icon"), ("Message", "Author")]
+            difjson = False
 
-    done.configure("Writing signs...", text_color="white")
+
+
+    #check if it wants to download files
+    try:
+        x["Downloadables"]
+        downloads=True
+    except:
+        downloads=False
+
+    header.configure("Writing signs...", text_color="white")
+
+    #open a file and write the signs
     rdpath = os.path.basename(jsonpath).split(".")[0] + ".rd"
     wfile = open(rdpath, "w", encoding="utf-8")
-    wfile.write("#file plugin\n")
     for sign, sign_name in signs:
         signing = ('sign: "%s", "%s"\n' % (sign_name, x[sign]))
         wfile.write(signing)
-    done.configure("Wrote signs!", text_color="white")
+    header.configure("Wrote signs!", text_color="white")
 
-    done.configure("Writing imports and swaps...", text_color="white")
+    #download the files
+    if downloads == True:
+        downloadables(x, wfile)
+
+    #creation
+    wfile.write('\n\narchive from;\n')
+    wfile.write('archive to;\n')
+    wfile.write('SoftObjectProperty search;\n')
+    wfile.write('SoftObjectProperty replace;\n\n\n')
+
+    #swaps
+    header.configure("Writing imports and swaps...", text_color="white")
     if difjson == True:
-        assets = x["swaps"]
+        try:
+            assets = x["swaps"]
+        except KeyError:
+           assets = x["Assets"] 
+           difjson = True
     elif difjson == False:
         assets = x["Assets"]
         
     for asset in assets:
-        # path is expected to exist
         pathtoexists = True
         AssetPath = asset["AssetPath"]
         try:
@@ -95,21 +204,24 @@ def json_to_rd(jsonpath, done):
             pathtoexists = False
             
         if pathtoexists == True:
-            fromar = "\nfrom_ar = import \"" + AssetPath + "\""
+            fromar = "\nfrom = import \"" + AssetPath + "\"" + ";\n"
             wfile.write(fromar)
-            toar = "\nto_ar = import \"" + AssetPathTo + "\" \n\n"
+            toar = "to = import \"" + AssetPathTo + "\"" + ";" + "\n\n"
             wfile.write(toar)
         elif pathtoexists == False:
-            fromar = "\nfrom_ar = import \"" + AssetPath + "\" \n\n"
+            fromar = "\nfrom = import \"" + AssetPath + "\"" + ";" + "\n\n"
             wfile.write(fromar)
 
         try:
             swaps = asset["Swaps"]
         except KeyError:
-            swaps = asset["swaps"]
+            try:
+                swaps = asset["swaps"]
+            except KeyError:
+                swaps = None
 
         if swaps is None:
-            wfile.write("\n\nfrom_ar.Swap(to_ar)\n\n")
+            wfile.write("\n\nfrom.Swap(to);\n")
             continue
 
         swap_items = []
@@ -120,117 +232,211 @@ def json_to_rd(jsonpath, done):
         
         swaps_sorted = sorted(swap_items, key=lambda d: len(d[1]), reverse=True)
 
+
         for searchstring, replacestring in swaps_sorted:
             #if not masterskeletalnull(replacestring):
-                seekwrite(pathtoexists, wfile, searchstring, replacestring)
+
+            seekwrite(pathtoexists, wfile, searchstring, replacestring, downloads)
         if pathtoexists is True:
-            wfile.write("\n\nfrom_ar.Swap(to_ar)\n\n")
-    done.configure(text="Done converting!", text_color="white")
+            wfile.write("\n\nfrom.Swap(to);\n")
+            wfile.write("from.Save();\n")
+        elif pathtoexists is False:
+            wfile.write("\nfrom.Save();\n\n")
+
+    if automateall.get() == 1:
+        multiprocess(rd_to_csp, os.path.basename(pathfielddata.get()).split(".")[0] + ".rd")
+        os.path.basename(pathfielddata.get()).split(".")[0] + ".json"
+        os.path.basename(pathfielddata.get()).split(".")[0] + ".rd"
+    else:
+        pass
+
+    if autocompile.get() == 0:
+        converttocsp.pack(padx=5, pady=5, side='right')
+    
+    elif autocompile.get() == 1:
+        multiprocess(rd_to_csp, os.path.basename(pathfielddata.get()).split(".")[0] + ".rd")
+
+    if autodeljson.get() == 1:
+        os.remove(os.path.basename(pathfielddata.get()).split(".")[0] + ".json")
+
+    header.configure(text="Done converting to RD!", text_color="white")
     wfile.close()
 
-def rd_to_csp(rd, done, compile_frame):
+def rd_to_csp(rd):
     if os.path.exists(rd):
-        if os.path.exists("SSPN.Repl.exe"):
-            sp.Popen('SSPN.repl.exe "%%localappdata%%/saturn/plugins"  "%s"' % (rd), shell=True)
-            done.configure(text="Done compiling!", text_color="white")
-        elif not os.path.exists("SSPN.Repl.exe"):
-            done.configure(text="Compiler not found!", text_color="red")
-            downloadcompiler = customtkinter.CTkButton(compile_frame, text="Download Compiler (give it time)", command=lambda: downcompiler(done))
-            downloadcompiler.pack(padx=5, pady=5, side="left")          
+        header.configure("Compiling...", text_color="white")
+        if os.path.exists("Radon.Repl.exe"):
+
+            sp.run("Radon.repl.exe", input=rd.encode())
+            shutil.move(os.getcwd() + "\\" + rd + ".csp", "%s\saturn\plugins" % (os.getenv("LOCALAPPDATA")))  
+
+            if autodelrd.get() == 1:
+                os.remove(os.path.basename(pathfielddata.get()).split(".")[0] + ".rd")
+            header.configure(text="Done compiling!", text_color="white")
+
+        elif not os.path.exists("Radon.Repl.exe"):
+            if autodowncompiler.get() == 0:
+                header.configure(text="Compiler not found!", text_color="red")
+                global downloadcompiler
+                downloadcompiler = customtkinter.CTkButton(compile_frame, text="Download Compiler", command=lambda: multiprocess(downcompiler, None))
+                downloadcompiler.pack(padx=5, pady=5, side="left")
+            else:
+                multiprocess(downcompiler, None)    
     else:
-        done.configure(text="Please convert your json first.", text_color="red")
+        header.configure(text="Please convert your json first.", text_color="red")
 
-def defcolortheme(inp):
-    if inp == "Blue":
+def defcolortheme(option2):
+    if option2 == "Blue":
         customtkinter.set_default_color_theme("blue")
-    elif inp == "Green":
+    elif option2 == "Green":
         customtkinter.set_default_color_theme("green")
-    elif inp == "Dark Blue":
+    elif option2 == "Dark Blue":
         customtkinter.set_default_color_theme("dark-blue")
-    info2.configure(text="Return to homepage to set your theme to " + inp.lower() + ".")
+    returntomain.destroy()
+    dropdownframe.destroy()
+    settingspage()
 
 
-def downcompiler(done):
-    getcompiler = sp.Popen('powershell -Command "wget -O SSPN.Repl.exe https://cdn.discordapp.com/attachments/1078667568082071623/1079002439866388480/SSPN.Repl.exe"', shell=True)
-    getcompiler.wait()
-    done.configure(text="Compiler downloaded!", text_color="white")
+def downcompiler():
+    header.configure(text="Downloading complier...", text_color="white")
+    get = requests.get(f"https://cdn.discordapp.com/attachments/1158794948670406746/1158798827751485491/Radon.Repl.zip")
+    with open("Radon.Repl.zip", "wb") as writing:
+        writing.write(get.content)
+    shutil.unpack_archive("Radon.Repl.zip", os.getcwd())
+    os.remove("Radon.Repl.zip")
+    header.configure(text="Compiler downloaded!", text_color="white")
+    downloadcompiler.forget()
+    if autodowncompiler.get() == 1:
+        multiprocess(rd_to_csp, os.path.basename(pathfielddata.get()).split(".")[0] + ".rd")
 
-def settingspage(settings, info_frame, convert_frame, compile_frame):
-    settings.destroy()
-    info_frame.destroy()
-    convert_frame.destroy()
-    compile_frame.destroy()
 
-    global returntomain
-    returnicon=customtkinter.CTkImage(Image.open(resource_path("icons/return.png")), size=(32, 32))
-    returntomain = customtkinter.CTkButton(app, image=returnicon, text="", fg_color="gray", width=32, height=32, command=mainpage)
+def settingspage():
+    try:
+        settings.destroy()
+        info_frame.destroy()
+        convert_frame.destroy()
+        compile_frame.destroy()
+        checkboxframe1.destroy()
+        checkboxframe2.destroy()
+    except:
+        pass
+
+    app.geometry("550x100")
+
+    global returntomain, returnicon
+    returnicon=customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\return.png")), size=(20, 20))
+    returntomain = customtkinter.CTkButton(app, image=returnicon, text="", fg_color="transparent", width=20, height=20, command=mainpage)
     returntomain.pack(padx=5, pady=5, anchor="nw")
 
     global dropdownframe
     dropdownframe = customtkinter.CTkFrame(app, fg_color="transparent")
     dropdownframe.pack()
 
+    global dropdown
     option = tkinter.StringVar()
     dropdown = customtkinter.CTkOptionMenu(dropdownframe, values=["System", "Dark", "Light"], variable=option, command=lambda option : customtkinter.set_appearance_mode(option))
     option.set("Choose Appearance Color")
     dropdown.pack(padx=5, pady=5, side="left")
-
+    
+    global dropdown2, option2
     option2 = tkinter.StringVar()
     dropdown2 = customtkinter.CTkOptionMenu(dropdownframe, values=["Blue", "Dark Blue", "Green"], variable=option2, command=lambda option2 : defcolortheme(option2))
     option2.set("Choose Color Theme")
     dropdown2.pack(padx=5, pady=5, side="right")
 
-    global info2
-    info2 = customtkinter.CTkLabel(app, text="")
-    info2.pack()
-
-#listoftests BrilliantBomber.json default_axe_to_stellar_axe.json Selene_To_The_Rogue_LAROI_ELECTRIFIED.json Sludgehammer_To_Candy_Axe.json BoogieDownToGetGriddy.json
-customtkinter.set_appearance_mode("dark")
-customtkinter.set_default_color_theme("dark-blue")
-
-app = customtkinter.CTk()
-app.geometry("500x250")
-app.title("Json to RD converter")
-
 def mainpage():
     try:
         returntomain.destroy()
         dropdownframe.destroy()
-        info2.destroy()
     except:
         pass
-    settingscog=customtkinter.CTkImage(Image.open(resource_path("icons/settings.png")), size=(32, 32))
-    settings = customtkinter.CTkButton(app, image=settingscog, text="", fg_color="transparent", width=32, height=32, command=lambda: settingspage(settings, info_frame, convert_frame, compile_frame))
+
+    app.geometry("550x275")
+
+    global settings
+    settingscog=customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\settings.png")), size=(20, 20))
+    settings = customtkinter.CTkButton(app, image=settingscog, text="", fg_color="transparent", width=20, height=20, command=lambda: settingspage())
     settings.pack(padx=5, pady=5, anchor="ne")
 
+    global info_frame
     info_frame = customtkinter.CTkFrame(app, fg_color="transparent")
     info_frame.pack()
 
-    title = customtkinter.CTkLabel(info_frame, text="Input the path to your json:")
-    title.pack(padx=6, pady=9)
+    global header
+    header = customtkinter.CTkLabel(info_frame, text="Input the path to your json:", font=("Arial", 20))
+    header.pack(padx=6, pady=9)
 
+    jsonpathbuttonpic=customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\upload.png")), size=(27, 27))
+    jsonpathbutton = customtkinter.CTkButton(info_frame, height=27, width=27, image=jsonpathbuttonpic, fg_color="transparent", text="", command=lambda : pathfielddata.set(easygui.fileopenbox()))
+    jsonpathbutton.pack(padx=5, side='right', anchor="n")
+
+    global pathfielddata
     pathfielddata = tkinter.StringVar()
-    pathfield = customtkinter.CTkEntry(info_frame, width=350, height=40, textvariable=pathfielddata)
+    pathfield = customtkinter.CTkEntry(info_frame, width=350, height=35, textvariable=pathfielddata)
     pathfield.pack()
+    pathfielddata.set("Input Path Here")
 
-    done = customtkinter.CTkLabel(info_frame, text="")
-    done.pack()
+    global checkboxframe1
+    checkboxframe1 = customtkinter.CTkFrame(app, fg_color="transparent", height=10)
+    checkboxframe1.pack()
 
+    global checkboxframe2
+    checkboxframe2 = customtkinter.CTkFrame(app, fg_color="transparent", height=10)
+    checkboxframe2.pack()
+
+    global automateall
+    automateall = customtkinter.CTkCheckBox(checkboxframe1, text="Automate everything", command=toggleall)
+    automateall.pack(side="left", padx=15, pady=5)
+    automateall.select()
+
+    global options1
+    global options2
+    global options
+    options1 = customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\plus.png")), size=(12, 12))
+    options2 = customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\minus.png")), size=(12, 12))
+    options = customtkinter.CTkButton(checkboxframe1, text="", fg_color="transparent", image=options1, command=showoptions, width=12, height=12)
+    options.pack(side="right")
+
+    global autodowncompiler
+    autodowncompiler = customtkinter.CTkCheckBox(checkboxframe2, text = "Auto download compiler if not found", command=lambda : automateall.deselect())
+    autodowncompiler.select()
+
+    global autocompile
+    autocompile = customtkinter.CTkCheckBox(checkboxframe2, text = "Auto compile after converting the plugin", command=lambda : automateall.deselect())
+    autocompile.select()
+
+    global autodelrd
+    autodelrd = customtkinter.CTkCheckBox(checkboxframe2, text = "Auto delete the RD file after compiling", command=lambda : automateall.deselect())
+    autodelrd.select()
+
+    global autodeljson
+    autodeljson = customtkinter.CTkCheckBox(checkboxframe2,text = "Auto delete the JSON file after compiling", command=lambda : automateall.deselect())
+    autodeljson.select()
+
+    global convert_frame
     convert_frame = customtkinter.CTkFrame(app, fg_color="transparent")
     convert_frame.pack()
 
+    global compile_frame
     compile_frame = customtkinter.CTkFrame(app, fg_color="transparent")
     compile_frame.pack()
 
-    jsonpathbutton = customtkinter.CTkButton(convert_frame, text="Select a JSON file", command=lambda : pathfielddata.set(easygui.fileopenbox()))
-    jsonpathbutton.pack(padx=5, pady=5, side='left')
-
-    converttord = customtkinter.CTkButton(convert_frame, text="Convert to RD", command=lambda : json_to_rd(pathfielddata.get(), done))
+    converttord = customtkinter.CTkButton(convert_frame, text="Convert to RD", command=lambda : json_to_rd(pathfielddata.get()))
     converttord.pack(padx=5, pady=5, side='left')
 
-    converttocsp = customtkinter.CTkButton(compile_frame, text="Compile", command=lambda : rd_to_csp(os.path.basename(pathfielddata.get()).split(".")[0] + ".rd", done, compile_frame))
-    converttocsp.pack(padx=5, pady=5, side='left')
+    global converttocsp
+    converttocsp = customtkinter.CTkButton(convert_frame, text="Compile", command=lambda : multiprocess(rd_to_csp, os.path.basename(pathfielddata.get()).split(".")[0] + ".rd"))
+
 
     app.mainloop()
 
-mainpage()
+if __name__ == "__main__":
+
+    customtkinter.set_appearance_mode("dark")
+    customtkinter.set_default_color_theme("dark-blue")
+
+    app = customtkinter.CTk()
+    app.geometry("550x275")
+    app.title("Json to RD converter")
+
+    mainpage()
