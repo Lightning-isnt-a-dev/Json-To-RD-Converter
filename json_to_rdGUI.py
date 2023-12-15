@@ -87,23 +87,49 @@ def showoptions():
 
         app.geometry("550x275")
 
-def downloadables(x, wfile):
+def downloadables(x, wfile, json):
     wfile.write("\n\n")
+
     for k, v in list(x["Downloadables"][0].items()):
-        if k == "backup":
-           continue
-        wfile.write("system.Download(\"" + v + "\", " + f"\"{k}" + "\");\n")
+        get = requests.get(v)
+        with open("plugin.zip", "wb") as writing:
+            writing.write(get.content)
+    
+    if not os.path.exists(os.getenv("LOCALAPPDATA") + "/json-to-rd/UEFN/"):
+        os.makedirs(os.getenv("LOCALAPPDATA") + "/json-to-rd/UEFN/")
+
+    LocalPluginsPath = os.getenv("LOCALAPPDATA") + "/json-to-rd/UEFN/" + os.path.basename(json).split(".")[0]
+    LocalPluginsPath = LocalPluginsPath.replace("\\", "/")
+
+    try:
+        os.makedirs(LocalPluginsPath)
+    except FileExistsError:
+        pass
+    shutil.unpack_archive("plugin.zip", LocalPluginsPath)
+    os.remove("plugin.zip")
+
+    for file in os.listdir(LocalPluginsPath):
+        wfile.write('system.Download("file://' + LocalPluginsPath + f"/{file}"  + f'", "{file.split(".")[1]}");')
+        wfile.write("\n")
+    
+
     wfile.write("\n")
 
 def seekwrite(pathtoexists, wfile, seekin, writein, downloads):
     if seekin == "CustomCharacterFaceData" or " " in writein:
         return
-    elif "Game" not in os.path.dirname(writein) and "BRCosmetics" not in os.path.dirname(writein) and downloads == False:
-        writeout = "/"
+    #elif "Game" not in os.path.dirname(writein) and "BRCosmetics" not in os.path.dirname(writein) and downloads == False:
+        #writeout = "/"
     else:
         writeout = os.path.dirname(writein) + "/" + os.path.basename(writein)
 
     seekout = os.path.dirname(seekin) + "/" + os.path.basename(seekin)
+
+    if downloads:
+        wfile.write('from.Invalidate(); \n')
+        wfile.write("from.Save(); \n\n\n")
+        wfile.write('from = import "FortniteGame/Content/Athena/Heroes/Meshes/Bodies/CP_Athena_Body_F_Fallback.uasset";\n\n')
+        seekout = "/Game/Characters/Player/Female/Medium/Bodies/F_MED_Ramirez_Fallback/Meshes/F_MED_Ramirez_Fallback.F_MED_Ramirez_Fallback"
 
     if pathtoexists:
         wfile.write("search = to.CreateSoftObjectProperty(\"" + seekout + "\")" + ";" + "\n")
@@ -114,6 +140,7 @@ def seekwrite(pathtoexists, wfile, seekin, writein, downloads):
         wfile.write("search = from.CreateSoftObjectProperty(\"" + seekout + "\")" + ";" + "\n")
         wfile.write("replace = from.CreateSoftObjectProperty(\"" + writeout + "\")" + ";" + "\n")
         wfile.write("from.SwapSoftObjectProperty(search, replace);\n\n")
+
         
 
 def json_to_rd(jsonpath):
@@ -149,11 +176,18 @@ def json_to_rd(jsonpath):
         difjson = False
     except KeyError:
         try:
+            x["default_name"]
             signs = [("default_name","Name"), ("swapped_icon","Icon"), ("messages", "Author")]
             difjson = True
         except KeyError:
             signs = [("Name","Name"), ("Icon","Icon"), ("Message", "Author")]
             difjson = False
+
+    try:
+        x["AssetPathTo"]
+        AssetPathInSigns = True
+    except KeyError:
+        pass
 
 
 
@@ -172,11 +206,12 @@ def json_to_rd(jsonpath):
     for sign, sign_name in signs:
         signing = ('sign: "%s", "%s"\n' % (sign_name, x[sign]))
         wfile.write(signing)
+    wfile.write('sign: "Description", "Converted from galaxy swapper, by Lightning."\n')
     header.configure("Wrote signs!", text_color="white")
 
     #download the files
     if downloads == True:
-        downloadables(x, wfile)
+        downloadables(x, wfile, jsonpath)
 
     #creation
     wfile.write('\n\narchive from;\n')
@@ -186,22 +221,28 @@ def json_to_rd(jsonpath):
 
     #swaps
     header.configure("Writing imports and swaps...", text_color="white")
-    if difjson == True:
+
+    try:
+        assets = x["swaps"]
+    except KeyError:
         try:
-            assets = x["swaps"]
+            assets = x["Swaps"]
         except KeyError:
-           assets = x["Assets"] 
-           difjson = True
-    elif difjson == False:
-        assets = x["Assets"]
-        
+            assets = x["Assets"]
+
+    if AssetPathInSigns:
+        AssetPath = x["AssetPathTo"]
+        assets = x["Swaps"]
+        pathtoexists = False
+
     for asset in assets:
-        pathtoexists = True
-        AssetPath = asset["AssetPath"]
-        try:
-            AssetPathTo = asset["AssetPathTo"]
-        except KeyError:
-            pathtoexists = False
+        if not AssetPathInSigns:
+            pathtoexists = True
+            AssetPath = asset["AssetPath"]
+            try:
+                AssetPathTo = asset["AssetPathTo"]
+            except KeyError:
+                pathtoexists = False
             
         if pathtoexists == True:
             fromar = "\nfrom = import \"" + AssetPath + "\"" + ";\n"
@@ -212,16 +253,20 @@ def json_to_rd(jsonpath):
             fromar = "\nfrom = import \"" + AssetPath + "\"" + ";" + "\n\n"
             wfile.write(fromar)
 
-        try:
-            swaps = asset["Swaps"]
-        except KeyError:
+        swaps = x["Swaps"]
+
+        if not AssetPathInSigns:
             try:
-                swaps = asset["swaps"]
+                swaps = asset["Swaps"]
             except KeyError:
-                swaps = None
+                try:
+                    swaps = asset["swaps"]
+                except KeyError:
+                    swaps = None
 
         if swaps is None:
             wfile.write("\n\nfrom.Swap(to);\n")
+            wfile.write("\n\nfrom.Save();\n")    
             continue
 
         swap_items = []
@@ -299,7 +344,7 @@ def defcolortheme(option2):
 
 def downcompiler():
     header.configure(text="Downloading complier...", text_color="white")
-    get = requests.get(f"https://cdn.discordapp.com/attachments/1158794948670406746/1158798827751485491/Radon.Repl.zip")
+    get = requests.get(f"https://cdn.discordapp.com/attachments/1158794948670406746/1183848587805851708/Radon.zip")
     with open("Radon.Repl.zip", "wb") as writing:
         writing.write(get.content)
     shutil.unpack_archive("Radon.Repl.zip", os.getcwd())
