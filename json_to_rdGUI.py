@@ -6,9 +6,11 @@ import easygui
 import threading as mp
 import shutil
 import requests
+import pickle
+import atexit
 from PIL import Image
 
-#installed with pip: easygui, customtkinter, pyyaml, pillow
+#installed with pip: easygui, customtkinter, pyyaml, pillowm requests
 
 
 
@@ -95,17 +97,31 @@ def downloadables(x, wfile, json):
         with open("plugin.zip", "wb") as writing:
             writing.write(get.content)
     
-    if not os.path.exists(os.getenv("LOCALAPPDATA") + "/json-to-rd/UEFN/"):
-        os.makedirs(os.getenv("LOCALAPPDATA") + "/json-to-rd/UEFN/")
+    if not os.path.exists(os.getenv("LOCALAPPDATA") + "/JsonToRD/UEFN-resources/"):
+        os.makedirs(os.getenv("LOCALAPPDATA") + "/JsonToRD/UEFN-resources/")
 
-    LocalPluginsPath = os.getenv("LOCALAPPDATA") + "/json-to-rd/UEFN/" + os.path.basename(json).split(".")[0]
+    LocalPluginsPath = os.getenv("LOCALAPPDATA") + "/JsonToRD/UEFN-resources/" + os.path.basename(json).split(".")[0]
     LocalPluginsPath = LocalPluginsPath.replace("\\", "/")
 
     try:
         os.makedirs(LocalPluginsPath)
     except FileExistsError:
         pass
+
+    shutil.rmtree(LocalPluginsPath)
     shutil.unpack_archive("plugin.zip", LocalPluginsPath)
+
+    try:
+        for subdir, dirs, files in os.walk(LocalPluginsPath):
+            for file in files:
+                try:
+                    shutil.move(subdir + "/" + file, LocalPluginsPath)
+                except shutil.Error:
+                    pass
+    except FileNotFoundError:
+        pass
+
+    os.rmdir(subdir)
     os.remove("plugin.zip")
 
     for file in os.listdir(LocalPluginsPath):
@@ -125,10 +141,7 @@ def seekwrite(pathtoexists, wfile, seekin, writein, downloads):
 
     seekout = os.path.dirname(seekin) + "/" + os.path.basename(seekin)
 
-    if downloads:
-        wfile.write('from.Invalidate(); \n')
-        wfile.write("from.Save(); \n\n\n")
-        wfile.write('from = import "FortniteGame/Content/Athena/Heroes/Meshes/Bodies/CP_Athena_Body_F_Fallback.uasset";\n\n')
+    if downloads is True and "Meshes" in seekout and "AnimBP" not in seekout:
         seekout = "/Game/Characters/Player/Female/Medium/Bodies/F_MED_Ramirez_Fallback/Meshes/F_MED_Ramirez_Fallback.F_MED_Ramirez_Fallback"
 
     if pathtoexists:
@@ -187,6 +200,7 @@ def json_to_rd(jsonpath):
         x["AssetPathTo"]
         AssetPathInSigns = True
     except KeyError:
+        AssetPathInSigns = False
         pass
 
 
@@ -232,7 +246,8 @@ def json_to_rd(jsonpath):
 
     if AssetPathInSigns:
         AssetPath = x["AssetPathTo"]
-        assets = x["Swaps"]
+        assets = x["AssetPathTo"]
+        assets = [assets]
         pathtoexists = False
 
     for asset in assets:
@@ -243,6 +258,10 @@ def json_to_rd(jsonpath):
                 AssetPathTo = asset["AssetPathTo"]
             except KeyError:
                 pathtoexists = False
+
+        notskin = False
+        if "/WID" in AssetPath or "/Emotes" in AssetPath or "/MusicPacks" in AssetPath:
+            notskin = True
             
         if pathtoexists == True:
             fromar = "\nfrom = import \"" + AssetPath + "\"" + ";\n"
@@ -253,7 +272,12 @@ def json_to_rd(jsonpath):
             fromar = "\nfrom = import \"" + AssetPath + "\"" + ";" + "\n\n"
             wfile.write(fromar)
 
-        swaps = x["Swaps"]
+        if AssetPathInSigns:
+            swaps = x["Swaps"]
+        if AssetPathInSigns and notskin == False:
+            wfile.write('from.Invalidate(); \n')
+            wfile.write("from.Save(); \n\n\n")
+            wfile.write('from = import "FortniteGame/Content/Athena/Heroes/Meshes/Bodies/CP_Athena_Body_F_Fallback.uasset";\n\n')
 
         if not AssetPathInSigns:
             try:
@@ -311,15 +335,20 @@ def rd_to_csp(rd):
     if os.path.exists(rd):
         header.configure("Compiling...", text_color="white")
         if os.path.exists("Radon.Repl.exe"):
-
-            sp.run("Radon.repl.exe", input=rd.encode())
-            shutil.move(os.getcwd() + "\\" + rd + ".csp", "%s\saturn\plugins" % (os.getenv("LOCALAPPDATA")))  
+            shutil.move("Radon.Repl.exe", os.getenv("LOCALAPPDATA")+"/JsonToRD")
+        if os.path.exists(os.getenv("LOCALAPPDATA")+"/JsonToRD/Radon.Repl.exe"):
+            sp.run(os.getenv("LOCALAPPDATA")+"/JsonToRD/Radon.repl.exe", input=rd.encode())
+            try:
+                os.remove(os.getenv("LOCALAPPDATA") + "/saturn/plugins/" + rd + ".csp")
+            except FileNotFoundError:
+                pass
+            shutil.move(os.getcwd() + "\\" + rd + ".csp", "%s\saturn\plugins" % (os.getenv("LOCALAPPDATA")))
 
             if autodelrd.get() == 1:
                 os.remove(os.path.basename(pathfielddata.get()).split(".")[0] + ".rd")
             header.configure(text="Done compiling!", text_color="white")
 
-        elif not os.path.exists("Radon.Repl.exe"):
+        elif not os.path.exists(os.getenv("LOCALAPPDATA")+"/JsonToRD/Radon.Repl.exe"):
             if autodowncompiler.get() == 0:
                 header.configure(text="Compiler not found!", text_color="red")
                 global downloadcompiler
@@ -333,10 +362,13 @@ def rd_to_csp(rd):
 def defcolortheme(option2):
     if option2 == "Blue":
         customtkinter.set_default_color_theme("blue")
+        prefs["theme"] = "blue"
     elif option2 == "Green":
         customtkinter.set_default_color_theme("green")
+        prefs["theme"] = "green"
     elif option2 == "Dark Blue":
         customtkinter.set_default_color_theme("dark-blue")
+        prefs["theme"] = "dark-blue"
     returntomain.destroy()
     dropdownframe.destroy()
     settingspage()
@@ -349,8 +381,12 @@ def downcompiler():
         writing.write(get.content)
     shutil.unpack_archive("Radon.Repl.zip", os.getcwd())
     os.remove("Radon.Repl.zip")
+    shutil.move("Radon.Repl.exe", os.getenv("LOCALAPPDATA")+"/JsonToRD")
     header.configure(text="Compiler downloaded!", text_color="white")
-    downloadcompiler.forget()
+    try:
+        downloadcompiler.forget()
+    except NameError:
+        pass
     if autodowncompiler.get() == 1:
         multiprocess(rd_to_csp, os.path.basename(pathfielddata.get()).split(".")[0] + ".rd")
 
@@ -432,7 +468,8 @@ def mainpage():
     global automateall
     automateall = customtkinter.CTkCheckBox(checkboxframe1, text="Automate everything", command=toggleall)
     automateall.pack(side="left", padx=15, pady=5)
-    automateall.select()
+    if prefs["autoall"] == 1:
+        automateall.select()
 
     global options1
     global options2
@@ -444,19 +481,23 @@ def mainpage():
 
     global autodowncompiler
     autodowncompiler = customtkinter.CTkCheckBox(checkboxframe2, text = "Auto download compiler if not found", command=lambda : automateall.deselect())
-    autodowncompiler.select()
+    if prefs["download"] == 1:
+        autodowncompiler.select()
 
     global autocompile
     autocompile = customtkinter.CTkCheckBox(checkboxframe2, text = "Auto compile after converting the plugin", command=lambda : automateall.deselect())
-    autocompile.select()
+    if prefs["compile"] == 1:
+        autocompile.select()
 
     global autodelrd
     autodelrd = customtkinter.CTkCheckBox(checkboxframe2, text = "Auto delete the RD file after compiling", command=lambda : automateall.deselect())
-    autodelrd.select()
+    if prefs["delrd"] == 1:
+        autodelrd.select()
 
     global autodeljson
     autodeljson = customtkinter.CTkCheckBox(checkboxframe2,text = "Auto delete the JSON file after compiling", command=lambda : automateall.deselect())
-    autodeljson.select()
+    if prefs["deljson"] == 1:
+        autodeljson.select()
 
     global convert_frame
     convert_frame = customtkinter.CTkFrame(app, fg_color="transparent")
@@ -475,13 +516,37 @@ def mainpage():
 
     app.mainloop()
 
-if __name__ == "__main__":
 
-    customtkinter.set_appearance_mode("dark")
-    customtkinter.set_default_color_theme("dark-blue")
+
+def exit():
+    prefs["appearance"] = customtkinter.get_appearance_mode()
+    prefs["deljson"] = autodeljson.get()
+    prefs["delrd"] = autodelrd.get()
+    prefs["compile"] = autocompile.get()
+    prefs["download"] = autodowncompiler.get()
+    prefs["autoall"] = automateall.get()
+
+    with open(os.getenv("LOCALAPPDATA")+"/JsonToRD/prefs", "wb") as savefile:
+        savefile.write(pickle.dumps(prefs))
+
+
+if __name__ == "__main__":
+    global prefs
+    prefs = {"appearance": "dark", "theme": "dark-blue", "deljson": "1", "delrd": "1", "compile": "1", "download": "1", "autoall": "1"}
+
+    if os.path.exists(os.getenv("LOCALAPPDATA")+"/JsonToRD/prefs"):
+        with open(os.getenv("LOCALAPPDATA")+"/JsonToRD/prefs", "rb") as file:
+            tempprefs = pickle.loads(file.read())
+    for key in tempprefs:
+        prefs[key] = tempprefs[key]
+
+    customtkinter.set_appearance_mode(prefs["appearance"])
+    customtkinter.set_default_color_theme(prefs["theme"])
 
     app = customtkinter.CTk()
     app.geometry("550x275")
     app.title("Json to RD converter")
 
     mainpage()
+
+atexit.register(exit)
