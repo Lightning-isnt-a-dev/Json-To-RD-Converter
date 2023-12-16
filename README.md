@@ -18,4 +18,4 @@ Join the discord <a href="https://discord.gg/saturnswapper">here</a>
 
 
 # Feedback and Help
-<p>Report any issues through github or straight to me on discord: Lightning#2538 </br> You can also @ me in the discord server</p>
+<p>Report any issues through github or straight to me on discord: _lightninggg </br> You can also @ me in the discord server</p>
