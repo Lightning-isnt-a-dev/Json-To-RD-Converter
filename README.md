@@ -1,4 +1,4 @@
-# Json To RD
+# Json To RD Converter
 
 <p>Not so simple converter for saturn swapper</p>
 
