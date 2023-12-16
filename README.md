@@ -1,6 +1,6 @@
-# Json-To-RD-for-Saturn-Swapper
+# Json To RD
 
-<p>Simple converter for saturn swapper</p>
+<p>Not so simple converter for saturn swapper</p>
 
 Join the discord <a href="https://discord.gg/saturnswapper">here</a>
 
@@ -12,7 +12,7 @@ Join the discord <a href="https://discord.gg/saturnswapper">here</a>
   <li>a .json plugin</li>
   <li>the .py (or exe, preferably the exe)</li>
   <li>SSPN.repl.exe (will be downloaded if not found)</li>
-  <li>The resources</li>
+  <li>The resources (not needed if using exe)</li>
 </ul>
 
 
