@@ -8,6 +8,7 @@ import shutil
 import requests
 import pickle
 import atexit
+from zipfile import ZipFile
 from PIL import Image
 
 #installed with pip: easygui, customtkinter, pyyaml, pillowm requests
@@ -108,20 +109,12 @@ def downloadables(x, wfile, json):
     except FileExistsError:
         pass
 
-    shutil.rmtree(LocalPluginsPath)
-    shutil.unpack_archive("plugin.zip", LocalPluginsPath)
+    with ZipFile("plugin.zip") as zipped:
+        for fil in [filename for filename in zipped.infolist() if not filename.is_dir() and os.path.splitext(filename.filename)[1] in [".pak", ".sig", ".utoc", ".ucas"]]:
+            with zipped.open(fil) as contents:
+                with open(LocalPluginsPath+f"/{os.path.basename(fil.filename)}", 'wb') as output:
+                    output.write(contents.read())
 
-    try:
-        for subdir, dirs, files in os.walk(LocalPluginsPath):
-            for file in files:
-                try:
-                    shutil.move(subdir + "/" + file, LocalPluginsPath)
-                except shutil.Error:
-                    pass
-    except FileNotFoundError:
-        pass
-
-    os.rmdir(subdir)
     os.remove("plugin.zip")
 
     for file in os.listdir(LocalPluginsPath):
@@ -131,7 +124,7 @@ def downloadables(x, wfile, json):
 
     wfile.write("\n")
 
-def seekwrite(pathtoexists, wfile, seekin, writein, downloads):
+def seekwrite(pathtoexists, wfile, seekin, writein, downloads, skin):
     if seekin == "CustomCharacterFaceData" or " " in writein:
         return
     #elif "Game" not in os.path.dirname(writein) and "BRCosmetics" not in os.path.dirname(writein) and downloads == False:
@@ -141,7 +134,7 @@ def seekwrite(pathtoexists, wfile, seekin, writein, downloads):
 
     seekout = os.path.dirname(seekin) + "/" + os.path.basename(seekin)
 
-    if downloads is True and "Meshes" in seekout and "AnimBP" not in seekout:
+    if downloads is True and "Meshes" in seekout and "AnimBP" not in seekout and skin == True:
         seekout = "/Game/Characters/Player/Female/Medium/Bodies/F_MED_Ramirez_Fallback/Meshes/F_MED_Ramirez_Fallback.F_MED_Ramirez_Fallback"
 
     if pathtoexists:
@@ -305,7 +298,7 @@ def json_to_rd(jsonpath):
         for searchstring, replacestring in swaps_sorted:
             #if not masterskeletalnull(replacestring):
 
-            seekwrite(pathtoexists, wfile, searchstring, replacestring, downloads)
+            seekwrite(pathtoexists, wfile, searchstring, replacestring, downloads, notskin)
         if pathtoexists is True:
             wfile.write("\n\nfrom.Swap(to);\n")
             wfile.write("from.Save();\n")
@@ -371,6 +364,7 @@ def defcolortheme(option2):
         prefs["theme"] = "dark-blue"
     returntomain.destroy()
     dropdownframe.destroy()
+    tFrame.destroy()
     settingspage()
 
 
@@ -402,12 +396,26 @@ def settingspage():
     except:
         pass
 
-    app.geometry("550x100")
+    app.geometry("550x200")
 
     global returntomain, returnicon
     returnicon=customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\return.png")), size=(20, 20))
     returntomain = customtkinter.CTkButton(app, image=returnicon, text="", fg_color="transparent", width=20, height=20, command=mainpage)
     returntomain.pack(padx=5, pady=5, anchor="nw")
+
+    global tFrame
+    tFrame = customtkinter.CTkFrame(app, fg_color="transparent")
+    tFrame.pack()
+
+    global tInfo
+    tInfo = customtkinter.CTkLabel(tFrame, text="UEFN plugin skin to swap from (will get saved)", font=("Arial", 15))
+    tInfo.pack(padx=5, pady=5)
+
+    global tSkin, tSkinInp
+    tSkinInp = tkinter.StringVar()
+    tSkin = customtkinter.CTkOptionMenu(tFrame, values=["Same as plugin", "Jennifer Walters (emote)", "The Origin (emote)"], variable=tSkinInp)
+    tSkinInp.set(prefs["tSkin"])
+    tSkin.pack(padx=5, pady=5, anchor="s")
 
     global dropdownframe
     dropdownframe = customtkinter.CTkFrame(app, fg_color="transparent")
@@ -417,18 +425,21 @@ def settingspage():
     option = tkinter.StringVar()
     dropdown = customtkinter.CTkOptionMenu(dropdownframe, values=["System", "Dark", "Light"], variable=option, command=lambda option : customtkinter.set_appearance_mode(option))
     option.set("Choose Appearance Color")
-    dropdown.pack(padx=5, pady=5, side="left")
+    dropdown.pack(padx=5, pady=20, side="left")
     
     global dropdown2, option2
     option2 = tkinter.StringVar()
     dropdown2 = customtkinter.CTkOptionMenu(dropdownframe, values=["Blue", "Dark Blue", "Green"], variable=option2, command=lambda option2 : defcolortheme(option2))
     option2.set("Choose Color Theme")
-    dropdown2.pack(padx=5, pady=5, side="right")
+    dropdown2.pack(padx=5, pady=20, side="right")
+
+
 
 def mainpage():
     try:
         returntomain.destroy()
         dropdownframe.destroy()
+        tFrame.destroy()
     except:
         pass
 
@@ -525,6 +536,7 @@ def exit():
     prefs["compile"] = autocompile.get()
     prefs["download"] = autodowncompiler.get()
     prefs["autoall"] = automateall.get()
+    prefs["tSkin"] = tSkinInp.get()
 
     with open(os.getenv("LOCALAPPDATA")+"/JsonToRD/prefs", "wb") as savefile:
         savefile.write(pickle.dumps(prefs))
@@ -532,13 +544,13 @@ def exit():
 
 if __name__ == "__main__":
     global prefs
-    prefs = {"appearance": "dark", "theme": "dark-blue", "deljson": "1", "delrd": "1", "compile": "1", "download": "1", "autoall": "1"}
+    prefs = {"appearance": "dark", "theme": "dark-blue", "deljson": "1", "delrd": "1", "compile": "1", "download": "1", "autoall": "1", "tSkin": "Same as JSON"}
 
     if os.path.exists(os.getenv("LOCALAPPDATA")+"/JsonToRD/prefs"):
         with open(os.getenv("LOCALAPPDATA")+"/JsonToRD/prefs", "rb") as file:
             tempprefs = pickle.loads(file.read())
-    for key in tempprefs:
-        prefs[key] = tempprefs[key]
+        for key in tempprefs:
+            prefs[key] = tempprefs[key]
 
     customtkinter.set_appearance_mode(prefs["appearance"])
     customtkinter.set_default_color_theme(prefs["theme"])
