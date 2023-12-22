@@ -8,6 +8,7 @@ import shutil
 import requests
 import pickle
 import atexit
+from pathlib import Path
 from zipfile import ZipFile
 from PIL import Image
 
@@ -22,7 +23,6 @@ from PIL import Image
     #if "Base" in os.path.dirname(replacestring) and ("Skeleton" in os.path.basename(replacestring) or "Fortnite_M_Avg_Player" in os.path.basename(replacestring)):
         #return True
 
-
 def multiprocess(func, arg):
     if arg == None:
         proc = mp.Thread(target=func)
@@ -36,6 +36,20 @@ def resource_path(relative_path):
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
+
+def defcolortheme(choice):
+    if choice == "Blue":
+        customtkinter.set_default_color_theme("blue")
+        prefs["theme"] = "blue"
+    elif choice == "Green":
+        customtkinter.set_default_color_theme("green")
+        prefs["theme"] = "green"
+    elif choice == "Dark Blue":
+        customtkinter.set_default_color_theme("dark-blue")
+        prefs["theme"] = "dark-blue"
+    returntomain.destroy()
+    dropdownframe.destroy()
+    settingspage()
 
 def selectall():
     autodowncompiler.select()
@@ -68,10 +82,8 @@ def forget():
     autodeljson.forget()
 
 def showoptions():
-    if options.cget("image") == options1:
-
-        options.configure(image=options2)
-
+    if options.cget("image") == plus:
+        options.configure(image=minus)
         pack()
 
         if automateall.get() == 1:
@@ -81,50 +93,64 @@ def showoptions():
         
         app.geometry("550x450")
 
-    elif options.cget("image") == options2:
-        options.configure(image=options1)
-
+    elif options.cget("image") == minus:
+        options.configure(image=plus)
         checkboxframe2.configure(height=10)
-        
         forget()
 
-        app.geometry("550x275")
+        app.geometry("550x290")
 
 def downloadables(x, wfile, json):
     wfile.write("\n\n")
 
+    LocalPluginsPath = os.getenv("LOCALAPPDATA") + "/JsonToRD/UEFN-resources/" + os.path.basename(json).split(".")[0]
+    LocalPluginsPath = LocalPluginsPath.replace("\\", "/")
+
+    IsZip = False
+
     for k, v in list(x["Downloadables"][0].items()):
-        get = requests.get(v)
-        with open("plugin.zip", "wb") as writing:
-            writing.write(get.content)
+        if k == "zip":
+            IsZip = True
+            get = requests.get(v)
+            with open("plugin.zip", "wb") as writing:
+                writing.write(get.content)
+            break
+        else:
+            get = requests.get(v)
+            with open("plugin." + k, "wb") as writing:
+                writing.write(get.content)
+            wfile.write(f'system.Download("file://{LocalPluginsPath}/plugin.{k}", "{k}");\n')
+            try:
+                os.remove(LocalPluginsPath + "/plugin." + k)
+                shutil.move("plugin." + k, LocalPluginsPath)
+            except FileNotFoundError:
+                shutil.move("plugin." + k, LocalPluginsPath)
+        
     
     if not os.path.exists(os.getenv("LOCALAPPDATA") + "/JsonToRD/UEFN-resources/"):
         os.makedirs(os.getenv("LOCALAPPDATA") + "/JsonToRD/UEFN-resources/")
-
-    LocalPluginsPath = os.getenv("LOCALAPPDATA") + "/JsonToRD/UEFN-resources/" + os.path.basename(json).split(".")[0]
-    LocalPluginsPath = LocalPluginsPath.replace("\\", "/")
 
     try:
         os.makedirs(LocalPluginsPath)
     except FileExistsError:
         pass
-
-    with ZipFile("plugin.zip") as zipped:
-        for fil in [filename for filename in zipped.infolist() if not filename.is_dir() and os.path.splitext(filename.filename)[1] in [".pak", ".sig", ".utoc", ".ucas"]]:
-            with zipped.open(fil) as contents:
-                with open(LocalPluginsPath+f"/{os.path.basename(fil.filename)}", 'wb') as output:
-                    output.write(contents.read())
-
-    os.remove("plugin.zip")
-
-    for file in os.listdir(LocalPluginsPath):
-        wfile.write('system.Download("file://' + LocalPluginsPath + f"/{file}"  + f'", "{file.split(".")[1]}");')
-        wfile.write("\n")
     
+    if IsZip:
+        with ZipFile("plugin.zip") as zipped:
+            for fil in [filename for filename in zipped.infolist() if not filename.is_dir() and os.path.splitext(filename.filename)[1] in [".pak", ".sig", ".utoc", ".ucas"]]:
+                with zipped.open(fil) as contents:
+                    with open(LocalPluginsPath+f"/{os.path.basename(fil.filename)}", 'wb') as output:
+                        output.write(contents.read())
+
+        os.remove("plugin.zip")
+
+        for fil in os.listdir(LocalPluginsPath):
+            wfile.write(f'system.Download("file://{LocalPluginsPath}/{fil}", "{fil.split(".")[1]}");')
+            wfile.write("\n")
 
     wfile.write("\n")
 
-def seekwrite(pathtoexists, wfile, seekin, writein, downloads, skin):
+def seekwrite(pathtoexists, wfile, seekin, writein, downloads, skin, inpjson):
     if seekin == "CustomCharacterFaceData" or " " in writein:
         return
     #elif "Game" not in os.path.dirname(writein) and "BRCosmetics" not in os.path.dirname(writein) and downloads == False:
@@ -134,8 +160,27 @@ def seekwrite(pathtoexists, wfile, seekin, writein, downloads, skin):
 
     seekout = os.path.dirname(seekin) + "/" + os.path.basename(seekin)
 
-    if downloads is True and "Meshes" in seekout and "AnimBP" not in seekout and skin == True:
-        seekout = "/Game/Characters/Player/Female/Medium/Bodies/F_MED_Ramirez_Fallback/Meshes/F_MED_Ramirez_Fallback.F_MED_Ramirez_Fallback"
+    tSkinPaths = {
+        "Same as plugin" : "/Game/Characters/Player/Female/Medium/Bodies/F_MED_Ramirez_Fallback/Meshes/F_MED_Ramirez_Fallback.F_MED_Ramirez_Fallback",
+        "Jennifer Walters" : "/Game/Characters/Player/Female/Medium/Bodies/F_MED_HighTower_Honeydew_Swole/Meshes/F_MED_HighTower_Honeydew_Swole.F_MED_HighTower_Honeydew_Swole",
+        "Twyn" : "/Game/Characters/Player/Female/Medium/Bodies/F_MED_Candor_Tech/Meshes/F_MED_Candor_Tech.F_MED_Candor_Tech",
+        "Lexa" : "/Game/Characters/Player/Female/Medium/Bodies/F_MED_Lexa_Armored/Meshes/F_MED_Lexa_Armored.F_MED_Lexa_Armored"
+    }
+
+    listofgamepaths = ["Game", "BRCosmetics", "VehicleCosmetics", "MeshCosmetics"]
+
+    if downloads and "Meshes" in seekout and "AnimBP" not in seekout and skin == False:
+        seekout = tSkinPaths[tSkin.get()]
+
+    if downloads and Path(writeout).parts[1] not in listofgamepaths:
+        pak = open(os.getenv("LOCALAPPDATA") + "/JsonToRD/UEFN-resources/" + os.path.splitext(os.path.basename(inpjson))[0]+"/plugin.pak" , 'r', encoding="ascii", errors="ignore").readlines()[1:37]
+        line = [x for x in pak if ".up" in x][0]
+        pluginUID = os.path.basename(line[line.index("../"): line.index(".up")])
+        if "Feature" in pluginUID:
+            pluginUID = pluginUID.split("Feature")[1]
+        if Path(writeout).parts[1] != pluginUID:
+            writeout = "/" + pluginUID + writeout
+    
 
     if pathtoexists:
         wfile.write("search = to.CreateSoftObjectProperty(\"" + seekout + "\")" + ";" + "\n")
@@ -172,6 +217,7 @@ def json_to_rd(jsonpath):
             yamlread = sp.run("%s %s" % (resource_path('resources\\deob\\galaxy_deobfuscator.exe'), jsonpath), capture_output=True, text=True)
             yamlread = yamlread.stdout.replace("\t", "    ")
             x = yaml.safe_load(yamlread)
+            print(x)
 
 
     #check for the type of json
@@ -221,10 +267,10 @@ def json_to_rd(jsonpath):
         downloadables(x, wfile, jsonpath)
 
     #creation
-    wfile.write('\n\narchive from;\n')
+    wfile.write('\narchive from;\n')
     wfile.write('archive to;\n')
     wfile.write('SoftObjectProperty search;\n')
-    wfile.write('SoftObjectProperty replace;\n\n\n')
+    wfile.write('SoftObjectProperty replace;\n\n')
 
     #swaps
     header.configure("Writing imports and swaps...", text_color="white")
@@ -255,6 +301,42 @@ def json_to_rd(jsonpath):
         notskin = False
         if "/WID" in AssetPath or "/Emotes" in AssetPath or "/MusicPacks" in AssetPath:
             notskin = True
+
+        tSkinImport = {
+            "Jennifer Walters" : {
+                "Head" : ("fortnitegame/Content/Characters/CharacterParts/Female/Medium/Heads/CP_Head_F_HightowerHoneydew_Swole.uasset", "/Game/Characters/Player/Female/Medium/Heads/F_MED_HighTower_Honeydew_Head_01/Meshes/F_MED_HighTower_Honeydew_Head_01.F_MED_HighTower_Honeydew_Head_01"),
+                "FaceAcc" : ("fortnitegame/Content/Characters/CharacterParts/FaceAccessories/CP_F_MED_HightowerHoneydew_Swole.uasset", "/Game/Characters/Player/Female/Medium/Bodies/F_MED_HighTower_Honeydew_Swole/Meshes/Parts/F_MED_HighTower_Honeydew_Swole_FaceAcc.F_MED_HighTower_Honeydew_Swole_FaceAcc"),
+                "Body" : "FortniteGame/Content/Athena/Heroes/Meshes/Bodies/CP_Body_Commando_F_HightowerHoneydew_Swole.uasset"
+            },
+
+            "Twyn" : {
+                "Head" : ("", ""),
+                "FaceAcc" : ("", ""),
+                "Body" : "FortniteGame/Content/Athena/Heroes/Meshes/Bodies/CP_Athena_Body_F_CandorTech.uasset"
+            },
+
+            "Lexa" : {
+                "Head" : ("fortnitegame/Content/Characters/CharacterParts/Female/Medium/Heads/CP_Head_F_Lexa_Armored.uasset", "/Game/Characters/CharacterParts/Female/Medium/Heads/CP_Head_F_Lexa_Armored.CP_Head_F_Lexa_Armored"),
+                "FaceAcc" : ("fortnitegame/Content/Characters/CharacterParts/FaceAccessories/CP_F_MED_LexaArmored_FaceAcc.uasset", "/Game/Characters/Player/Female/Medium/Bodies/F_MED_Lexa_Armored/Meshes/Parts/F_MED_Lexa_Armored.F_MED_Lexa_Armored"),
+                "Body" : "fortnitegame/Content/Athena/Heroes/Meshes/Bodies/CP_Body_Commando_F_LexaArmored.uasset"
+            }
+        }
+        if tSkin.get() != "Same as plugin" and downloads == True and notskin == False:
+            for cp, paths in tSkinImport[tSkin.get()].items():
+                #if the characterpart is the body, just set the assetpath to be the import 
+                if cp == "Body":
+                    AssetPath = paths
+                    break
+
+                #uasset is the asset and mesh is the mesh path
+                uasset, mesh = paths
+                wfile.write(f'from = import "{uasset}";\n')
+                wfile.write(f'search = from.CreateSoftObjectProperty("{mesh}");\n')
+                #invalidate the unneeded mesh
+                wfile.write('replace = from.CreateSoftObjectProperty("/Game/invalid.invalid");\n')
+                wfile.write('from.SwapSoftObjectProperty(search, replace);\n')
+                wfile.write('from.Save();\n\n\n')
+
             
         if pathtoexists == True:
             fromar = "\nfrom = import \"" + AssetPath + "\"" + ";\n"
@@ -267,7 +349,7 @@ def json_to_rd(jsonpath):
 
         if AssetPathInSigns:
             swaps = x["Swaps"]
-        if AssetPathInSigns and notskin == False:
+        if AssetPathInSigns and notskin == False and tSkin.get() == "Same as plugin":
             wfile.write('from.Invalidate(); \n')
             wfile.write("from.Save(); \n\n\n")
             wfile.write('from = import "FortniteGame/Content/Athena/Heroes/Meshes/Bodies/CP_Athena_Body_F_Fallback.uasset";\n\n')
@@ -282,8 +364,8 @@ def json_to_rd(jsonpath):
                     swaps = None
 
         if swaps is None:
-            wfile.write("\n\nfrom.Swap(to);\n")
-            wfile.write("\n\nfrom.Save();\n")    
+            wfile.write("\nfrom.Swap(to);\n")
+            wfile.write("from.Save();\n")    
             continue
 
         swap_items = []
@@ -298,12 +380,12 @@ def json_to_rd(jsonpath):
         for searchstring, replacestring in swaps_sorted:
             #if not masterskeletalnull(replacestring):
 
-            seekwrite(pathtoexists, wfile, searchstring, replacestring, downloads, notskin)
+            seekwrite(pathtoexists, wfile, searchstring, replacestring, downloads, notskin, jsonpath)
         if pathtoexists is True:
             wfile.write("\n\nfrom.Swap(to);\n")
             wfile.write("from.Save();\n")
         elif pathtoexists is False:
-            wfile.write("\nfrom.Save();\n\n")
+            wfile.write("from.Save();\n\n")
 
     if automateall.get() == 1:
         multiprocess(rd_to_csp, os.path.basename(pathfielddata.get()).split(".")[0] + ".rd")
@@ -323,6 +405,7 @@ def json_to_rd(jsonpath):
 
     header.configure(text="Done converting to RD!", text_color="white")
     wfile.close()
+
 
 def rd_to_csp(rd):
     if os.path.exists(rd):
@@ -352,21 +435,6 @@ def rd_to_csp(rd):
     else:
         header.configure(text="Please convert your json first.", text_color="red")
 
-def defcolortheme(option2):
-    if option2 == "Blue":
-        customtkinter.set_default_color_theme("blue")
-        prefs["theme"] = "blue"
-    elif option2 == "Green":
-        customtkinter.set_default_color_theme("green")
-        prefs["theme"] = "green"
-    elif option2 == "Dark Blue":
-        customtkinter.set_default_color_theme("dark-blue")
-        prefs["theme"] = "dark-blue"
-    returntomain.destroy()
-    dropdownframe.destroy()
-    tFrame.destroy()
-    settingspage()
-
 
 def downcompiler():
     header.configure(text="Downloading complier...", text_color="white")
@@ -393,15 +461,47 @@ def settingspage():
         compile_frame.destroy()
         checkboxframe1.destroy()
         checkboxframe2.destroy()
+        tFrame.destroy()
     except:
         pass
 
-    app.geometry("550x200")
+    app.geometry("550x120")
 
     global returntomain, returnicon
     returnicon=customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\return.png")), size=(20, 20))
     returntomain = customtkinter.CTkButton(app, image=returnicon, text="", fg_color="transparent", width=20, height=20, command=mainpage)
     returntomain.pack(padx=5, pady=5, anchor="nw")
+
+    global dropdownframe
+    dropdownframe = customtkinter.CTkFrame(app, fg_color="transparent")
+    dropdownframe.pack()
+
+    global appearance
+    appearancevar = tkinter.StringVar()
+    appearance = customtkinter.CTkOptionMenu(dropdownframe, values=["System", "Dark", "Light"], variable=appearancevar, command=lambda appearancevar : customtkinter.set_appearance_mode(appearancevar))
+    appearancevar.set("Choose Appearance Color")
+    appearance.pack(padx=5, pady=20, side="left")
+    
+    global theme, themevar
+    themevar = tkinter.StringVar()
+    theme = customtkinter.CTkOptionMenu(dropdownframe, values=["Blue", "Dark Blue", "Green"], variable=themevar, command=lambda themevar : defcolortheme(themevar))
+    themevar.set("Choose Color Theme")
+    theme.pack(padx=5, pady=20, side="right")
+
+
+def mainpage():
+    try:
+        returntomain.destroy()
+        dropdownframe.destroy()
+    except:
+        pass
+
+    app.geometry("550x285")
+
+    global settings
+    settingscog=customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\settings.png")), size=(20, 20))
+    settings = customtkinter.CTkButton(app, image=settingscog, text="", fg_color="transparent", width=20, height=20, command=lambda: settingspage())
+    settings.pack(padx=5, pady=5, anchor="ne")
 
     global tFrame
     tFrame = customtkinter.CTkFrame(app, fg_color="transparent")
@@ -409,46 +509,13 @@ def settingspage():
 
     global tInfo
     tInfo = customtkinter.CTkLabel(tFrame, text="UEFN plugin skin to swap from (will get saved)", font=("Arial", 15))
-    tInfo.pack(padx=5, pady=5)
+    tInfo.pack(padx=5, pady=5, side="top")
 
-    global tSkin, tSkinInp
+    global tSkin
     tSkinInp = tkinter.StringVar()
-    tSkin = customtkinter.CTkOptionMenu(tFrame, values=["Same as plugin", "Jennifer Walters (emote)", "The Origin (emote)"], variable=tSkinInp)
-    tSkinInp.set(prefs["tSkin"])
-    tSkin.pack(padx=5, pady=5, anchor="s")
-
-    global dropdownframe
-    dropdownframe = customtkinter.CTkFrame(app, fg_color="transparent")
-    dropdownframe.pack()
-
-    global dropdown
-    option = tkinter.StringVar()
-    dropdown = customtkinter.CTkOptionMenu(dropdownframe, values=["System", "Dark", "Light"], variable=option, command=lambda option : customtkinter.set_appearance_mode(option))
-    option.set("Choose Appearance Color")
-    dropdown.pack(padx=5, pady=20, side="left")
-    
-    global dropdown2, option2
-    option2 = tkinter.StringVar()
-    dropdown2 = customtkinter.CTkOptionMenu(dropdownframe, values=["Blue", "Dark Blue", "Green"], variable=option2, command=lambda option2 : defcolortheme(option2))
-    option2.set("Choose Color Theme")
-    dropdown2.pack(padx=5, pady=20, side="right")
-
-
-
-def mainpage():
-    try:
-        returntomain.destroy()
-        dropdownframe.destroy()
-        tFrame.destroy()
-    except:
-        pass
-
-    app.geometry("550x275")
-
-    global settings
-    settingscog=customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\settings.png")), size=(20, 20))
-    settings = customtkinter.CTkButton(app, image=settingscog, text="", fg_color="transparent", width=20, height=20, command=lambda: settingspage())
-    settings.pack(padx=5, pady=5, anchor="ne")
+    tSkin = customtkinter.CTkOptionMenu(tFrame, values=["Same as plugin", "Jennifer Walters", "Twyn (NOT WORKING RN)", "Lexa"], variable=tSkinInp)
+    tSkin.set(prefs["tSkin"])
+    tSkin.pack(padx=5, pady=5, side="bottom")
 
     global info_frame
     info_frame = customtkinter.CTkFrame(app, fg_color="transparent")
@@ -481,13 +548,11 @@ def mainpage():
     automateall.pack(side="left", padx=15, pady=5)
     if prefs["autoall"] == 1:
         automateall.select()
-
-    global options1
-    global options2
-    global options
-    options1 = customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\plus.png")), size=(12, 12))
-    options2 = customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\minus.png")), size=(12, 12))
-    options = customtkinter.CTkButton(checkboxframe1, text="", fg_color="transparent", image=options1, command=showoptions, width=12, height=12)
+    
+    global plus, minus, options
+    plus = customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\plus.png")), size=(12, 12))
+    minus = customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\minus.png")), size=(12, 12))
+    options = customtkinter.CTkButton(checkboxframe1, text="", fg_color="transparent", image=plus, command=showoptions, width=12, height=12)
     options.pack(side="right")
 
     global autodowncompiler
@@ -529,14 +594,14 @@ def mainpage():
 
 
 
-def exit():
+def onexit():
     prefs["appearance"] = customtkinter.get_appearance_mode()
     prefs["deljson"] = autodeljson.get()
     prefs["delrd"] = autodelrd.get()
     prefs["compile"] = autocompile.get()
     prefs["download"] = autodowncompiler.get()
     prefs["autoall"] = automateall.get()
-    prefs["tSkin"] = tSkinInp.get()
+    prefs["tSkin"] = tSkin.get()
 
     with open(os.getenv("LOCALAPPDATA")+"/JsonToRD/prefs", "wb") as savefile:
         savefile.write(pickle.dumps(prefs))
@@ -544,14 +609,14 @@ def exit():
 
 if __name__ == "__main__":
     global prefs
-    prefs = {"appearance": "dark", "theme": "dark-blue", "deljson": "1", "delrd": "1", "compile": "1", "download": "1", "autoall": "1", "tSkin": "Same as JSON"}
+    prefs = {"appearance": "dark", "theme": "dark-blue", "deljson": "1", "delrd": "1", "compile": "1", "download": "1", "autoall": "1", "tSkin": "Same as plugin"}
 
     if os.path.exists(os.getenv("LOCALAPPDATA")+"/JsonToRD/prefs"):
         with open(os.getenv("LOCALAPPDATA")+"/JsonToRD/prefs", "rb") as file:
             tempprefs = pickle.loads(file.read())
         for key in tempprefs:
             prefs[key] = tempprefs[key]
-
+    
     customtkinter.set_appearance_mode(prefs["appearance"])
     customtkinter.set_default_color_theme(prefs["theme"])
 
@@ -559,6 +624,7 @@ if __name__ == "__main__":
     app.geometry("550x275")
     app.title("Json to RD converter")
 
+    
     mainpage()
 
-atexit.register(exit)
+atexit.register(onexit)
