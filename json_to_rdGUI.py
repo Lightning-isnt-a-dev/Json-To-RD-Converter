@@ -28,8 +28,6 @@ except ModuleNotFoundError:
     pip install packaging
     """)
 
-print("hihi")
-
 #listoftests BrilliantBomber.json default_axe_to_stellar_axe.json Selene_To_The_Rogue_LAROI_ELECTRIFIED.json Sludgehammer_To_Candy_Axe.json BoogieDownToGetGriddy.json
 
 
