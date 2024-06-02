@@ -9,8 +9,6 @@ from atexit import register
 from pathlib import Path
 from zipfile import ZipFile
 
-# removed fr
-
 try:
     import customtkinter
     from PIL import Image
