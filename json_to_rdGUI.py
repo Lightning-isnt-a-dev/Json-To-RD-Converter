@@ -1,18 +1,32 @@
-import yaml
-import os, sys
-import tkinter, customtkinter
-import subprocess as sp
-import easygui
-import threading as mp
-import shutil
-import requests
-import pickle
-import atexit
+import os
+import sys
+from tkinter import StringVar as TkinterStringVar
+from subprocess import run as SPRun
+from threading import Thread
+from shutil import move as ShutilMove, unpack_archive as Shutil_Unpack
+from pickle import dumps as PickleDumps, loads as PickleLoads
+from atexit import register
 from pathlib import Path
 from zipfile import ZipFile
-from PIL import Image
 
-#installed with pip: easygui, customtkinter, pyyaml, pillowm requests
+try:
+    import customtkinter
+    from PIL import Image
+    from requests import get as RequestsGet
+    from easygui import fileopenbox
+    from yaml import safe_load as Yaml_Safe_Load
+
+except ModuleNotFoundError:
+    print("Please download the following modules.")
+
+    print("""
+    pip install pillow
+    pip install pyyaml
+    pip install requests
+    pip install easygui
+    pip install customtkinter
+    pip install packaging
+    """)
 
 
 
@@ -23,11 +37,11 @@ from PIL import Image
     #if "Base" in os.path.dirname(replacestring) and ("Skeleton" in os.path.basename(replacestring) or "Fortnite_M_Avg_Player" in os.path.basename(replacestring)):
         #return True
 
-def multiprocess(func, arg):
-    if arg == None:
-        proc = mp.Thread(target=func)
+def multiprocess(func, *args):
+    if args is None:
+        proc = Thread(target=func)
     else:
-        proc = mp.Thread(target=func, args=(arg,))
+        proc = Thread(target=func, args=args)
     proc.start()
 
 def resource_path(relative_path):
@@ -103,37 +117,43 @@ def showoptions():
 def downloadables(x, wfile, json):
     wfile.write("\n\n")
 
-    LocalPluginsPath = os.getenv("LOCALAPPDATA") + "/JsonToRD/UEFN-resources/" + os.path.basename(json).split(".")[0]
-    LocalPluginsPath = LocalPluginsPath.replace("\\", "/")
+    LocalPluginsPath = f"{LOCALAPPDATA}/JsonToRD/UEFN-resources/{os.path.basename(json).split('.')[0]}"
+
+    if not os.path.exists(LocalPluginsPath):
+        os.mkdir(LocalPluginsPath)
 
     IsZip = False
 
     for k, v in list(x["Downloadables"][0].items()):
         if k == "zip":
             IsZip = True
-            get = requests.get(v)
+            get = RequestsGet(v)
             with open("plugin.zip", "wb") as writing:
                 writing.write(get.content)
             break
         else:
-            get = requests.get(v)
+            print("iszip")
+            get = RequestsGet(v)
             with open("plugin." + k, "wb") as writing:
                 writing.write(get.content)
             wfile.write(f'system.Download("file://{LocalPluginsPath}/plugin.{k}", "{k}");\n')
             try:
                 os.remove(LocalPluginsPath + "/plugin." + k)
-                shutil.move("plugin." + k, LocalPluginsPath)
+                ShutilMove("plugin." + k, LocalPluginsPath)
             except FileNotFoundError:
-                shutil.move("plugin." + k, LocalPluginsPath)
+                ShutilMove("plugin." + k, LocalPluginsPath)
         
     
-    if not os.path.exists(os.getenv("LOCALAPPDATA") + "/JsonToRD/UEFN-resources/"):
-        os.makedirs(os.getenv("LOCALAPPDATA") + "/JsonToRD/UEFN-resources/")
+    if not f"{LOCALAPPDATA}/JsonToRD/UEFN-resources/":
+        os.makedirs(f"{LOCALAPPDATA}/JsonToRD/UEFN-resources/")
 
     try:
         os.makedirs(LocalPluginsPath)
     except FileExistsError:
         pass
+    except FileNotFoundError:
+        os.remove(LocalPluginsPath)
+        os.makedirs(LocalPluginsPath)
     
     if IsZip:
         with ZipFile("plugin.zip") as zipped:
@@ -150,10 +170,10 @@ def downloadables(x, wfile, json):
 
     wfile.write("\n")
 
-def seekwrite(pathtoexists, wfile, seekin, writein, downloads, skin, inpjson):
+def seekwrite(pathtoexists, wfile, seekin, writein, isUEFN, downloads, skin, inpjson):
     if seekin == "CustomCharacterFaceData" or " " in writein:
         return
-    #elif "Game" not in os.path.dirname(writein) and "BRCosmetics" not in os.path.dirname(writein) and downloads == False:
+    #elif "Game" not in os.path.dirname(writein) and "BRCosmetics" not in os.path.dirname(writein) and downloads is False:
         #writeout = "/"
     else:
         writeout = os.path.dirname(writein) + "/" + os.path.basename(writein)
@@ -167,13 +187,11 @@ def seekwrite(pathtoexists, wfile, seekin, writein, downloads, skin, inpjson):
         "Lexa" : "/Game/Characters/Player/Female/Medium/Bodies/F_MED_Lexa_Armored/Meshes/F_MED_Lexa_Armored.F_MED_Lexa_Armored"
     }
 
-    listofgamepaths = ["Game", "BRCosmetics", "VehicleCosmetics", "MeshCosmetics"]
-
-    if downloads and "Meshes" in seekout and "AnimBP" not in seekout and skin == False:
+    if downloads and "Meshes" in seekout and "AnimBP" not in seekout and skin is False:
         seekout = tSkinPaths[tSkin.get()]
 
-    if downloads and Path(writeout).parts[1] not in listofgamepaths:
-        pak = open(os.getenv("LOCALAPPDATA") + "/JsonToRD/UEFN-resources/" + os.path.splitext(os.path.basename(inpjson))[0]+"/plugin.pak" , 'r', encoding="ascii", errors="ignore").readlines()[1:37]
+    if downloads and isUEFN:
+        pak = open(LOCALAPPDATA + "/JsonToRD/UEFN-resources/" + os.path.splitext(os.path.basename(inpjson))[0]+"/plugin.pak" , 'r', encoding="ascii", errors="ignore").readlines()[1:37]
         line = [x for x in pak if ".up" in x][0]
         pluginUID = os.path.basename(line[line.index("../"): line.index(".up")])
         if "Feature" in pluginUID:
@@ -181,6 +199,9 @@ def seekwrite(pathtoexists, wfile, seekin, writein, downloads, skin, inpjson):
         if Path(writeout).parts[1] != pluginUID:
             writeout = "/" + pluginUID + writeout
     
+    if "/" not in writein:
+        writeout = writein
+        seekout = seekin
 
     if pathtoexists:
         wfile.write("search = to.CreateSoftObjectProperty(\"" + seekout + "\")" + ";" + "\n")
@@ -208,32 +229,34 @@ def json_to_rd(jsonpath):
     try:
         yamlread = open(jsonpath, encoding='utf-8').read()
         yamlread = yamlread.replace("\t", "    ")
-        x = yaml.safe_load(yamlread)
+        x = Yaml_Safe_Load(yamlread)
         x["Name"]
-    except:
+    except Exception:
         try:
             x["default_name"]
         except TypeError:
-            yamlread = sp.run("%s %s" % (resource_path('resources\\deob\\galaxy_deobfuscator.exe'), jsonpath), capture_output=True, text=True)
+            yamlread = SPRun("%s %s" % (resource_path('resources\\deob\\galaxy_deobfuscator.exe'), jsonpath), capture_output=True, text=True)
             yamlread = yamlread.stdout.replace("\t", "    ")
-            x = yaml.safe_load(yamlread)
-            print(x)
+            x = Yaml_Safe_Load(yamlread)
 
 
     #check for the type of json
+    difjson = False
     try:
         x["Name"]
         x["Swapicon"]
         signs = [("Name","Name"), ("Swapicon","Icon"), ("Message", "Author")]
-        difjson = False
     except KeyError:
         try:
             x["default_name"]
             signs = [("default_name","Name"), ("swapped_icon","Icon"), ("messages", "Author")]
             difjson = True
         except KeyError:
-            signs = [("Name","Name"), ("Icon","Icon"), ("Message", "Author")]
-            difjson = False
+            try:
+                x["Swapicon"]
+                signs = [("Name","Name"), ("Swapicon","Icon"), ("Message", "Author")]
+            except KeyError:
+                signs = [("Name","Name"), ("Icon","Icon"), ("Message", "Author")]
 
     try:
         x["AssetPathTo"]
@@ -248,7 +271,7 @@ def json_to_rd(jsonpath):
     try:
         x["Downloadables"]
         downloads=True
-    except:
+    except Exception:
         downloads=False
 
     header.configure("Writing signs...", text_color="white")
@@ -263,7 +286,7 @@ def json_to_rd(jsonpath):
     header.configure("Wrote signs!", text_color="white")
 
     #download the files
-    if downloads == True:
+    if downloads is True:
         downloadables(x, wfile, jsonpath)
 
     #creation
@@ -287,20 +310,26 @@ def json_to_rd(jsonpath):
         AssetPath = x["AssetPathTo"]
         assets = x["AssetPathTo"]
         assets = [assets]
-        pathtoexists = False
+        PathToExists = False
 
     for asset in assets:
         if not AssetPathInSigns:
-            pathtoexists = True
+            PathToExists = True
             AssetPath = asset["AssetPath"]
             try:
                 AssetPathTo = asset["AssetPathTo"]
             except KeyError:
-                pathtoexists = False
+                PathToExists = False
+
+        
+        ListOfGameIDS = ["/WID", "/Emotes", "/MusicPacks", "/EID"]
 
         notskin = False
-        if "/WID" in AssetPath or "/Emotes" in AssetPath or "/MusicPacks" in AssetPath:
-            notskin = True
+        
+        for ID in ListOfGameIDS:
+            if ID.lower() in AssetPath.lower():
+                notskin = True
+                break
 
         tSkinImport = {
             "Jennifer Walters" : {
@@ -321,7 +350,7 @@ def json_to_rd(jsonpath):
                 "Body" : "fortnitegame/Content/Athena/Heroes/Meshes/Bodies/CP_Body_Commando_F_LexaArmored.uasset"
             }
         }
-        if tSkin.get() != "Same as plugin" and downloads == True and notskin == False:
+        if tSkin.get() != "Same as plugin" and downloads is True and notskin is False:
             for cp, paths in tSkinImport[tSkin.get()].items():
                 #if the characterpart is the body, just set the assetpath to be the import 
                 if cp == "Body":
@@ -338,18 +367,14 @@ def json_to_rd(jsonpath):
                 wfile.write('from.Save();\n\n\n')
 
             
-        if pathtoexists == True:
-            fromar = "\nfrom = import \"" + AssetPath + "\"" + ";\n"
-            wfile.write(fromar)
-            toar = "to = import \"" + AssetPathTo + "\"" + ";" + "\n\n"
-            wfile.write(toar)
-        elif pathtoexists == False:
-            fromar = "\nfrom = import \"" + AssetPath + "\"" + ";" + "\n\n"
-            wfile.write(fromar)
+        wfile.write("\nfrom = import \"" + AssetPath + "\"" + ";\n")
+
+        if PathToExists:
+            wfile.write("to = import \"" + AssetPathTo + "\"" + ";" + "\n\n")
 
         if AssetPathInSigns:
             swaps = x["Swaps"]
-        if AssetPathInSigns and notskin == False and tSkin.get() == "Same as plugin":
+        if AssetPathInSigns and notskin is False and tSkin.get() == "Same as plugin":
             wfile.write('from.Invalidate(); \n')
             wfile.write("from.Save(); \n\n\n")
             wfile.write('from = import "FortniteGame/Content/Athena/Heroes/Meshes/Bodies/CP_Athena_Body_F_Fallback.uasset";\n\n')
@@ -369,30 +394,37 @@ def json_to_rd(jsonpath):
             continue
 
         swap_items = []
-        if difjson == True:
+        if difjson is True:
             swap_items = swaps.items()
-        elif difjson == False:
-            swap_items = [(swap["search"], swap["replace"]) for swap in swaps]
+        elif difjson is False:
+
+            swap_items = []
+            for swap in swaps:
+                swapsTuple = (swap["search"], swap["replace"])
+
+                if "UEFN" in swap:
+                    swapsTuple += (swap["UEFN"], )
+                else:
+                    swapsTuple += (False, )
+
+                swap_items.append(swapsTuple)
+
         
         swaps_sorted = sorted(swap_items, key=lambda d: len(d[1]), reverse=True)
 
 
-        for searchstring, replacestring in swaps_sorted:
+        for searchstring, replacestring, UEFN in swaps_sorted:
             #if not masterskeletalnull(replacestring):
 
-            seekwrite(pathtoexists, wfile, searchstring, replacestring, downloads, notskin, jsonpath)
-        if pathtoexists is True:
-            wfile.write("\n\nfrom.Swap(to);\n")
-            wfile.write("from.Save();\n")
-        elif pathtoexists is False:
-            wfile.write("from.Save();\n\n")
+            seekwrite(PathToExists, wfile, searchstring, replacestring, UEFN, downloads, notskin, jsonpath)
+        
+        if PathToExists:
+            wfile.write("\nfrom.Swap(to);\n")
+
+        wfile.write("from.Save();\n\n")
 
     if automateall.get() == 1:
         multiprocess(rd_to_csp, os.path.basename(pathfielddata.get()).split(".")[0] + ".rd")
-        os.path.basename(pathfielddata.get()).split(".")[0] + ".json"
-        os.path.basename(pathfielddata.get()).split(".")[0] + ".rd"
-    else:
-        pass
 
     if autocompile.get() == 0:
         converttocsp.pack(padx=5, pady=5, side='right')
@@ -411,20 +443,20 @@ def rd_to_csp(rd):
     if os.path.exists(rd):
         header.configure("Compiling...", text_color="white")
         if os.path.exists("Radon.Repl.exe"):
-            shutil.move("Radon.Repl.exe", os.getenv("LOCALAPPDATA")+"/JsonToRD")
-        if os.path.exists(os.getenv("LOCALAPPDATA")+"/JsonToRD/Radon.Repl.exe"):
-            sp.run(os.getenv("LOCALAPPDATA")+"/JsonToRD/Radon.repl.exe", input=rd.encode())
+            ShutilMove("Radon.Repl.exe", LOCALAPPDATA+"/JsonToRD")
+        if os.path.exists(LOCALAPPDATA+"/JsonToRD/Radon.Repl.exe"):
+            SPRun(LOCALAPPDATA+"/JsonToRD/Radon.repl.exe", input=rd.encode())
             try:
-                os.remove(os.getenv("LOCALAPPDATA") + "/saturn/plugins/" + rd + ".csp")
+                os.remove(LOCALAPPDATA + "/saturn/plugins/" + rd + ".csp")
             except FileNotFoundError:
                 pass
-            shutil.move(os.getcwd() + "\\" + rd + ".csp", "%s\saturn\plugins" % (os.getenv("LOCALAPPDATA")))
+            ShutilMove(f"{os.getcwd()}\\{rd}.csp", "%s/saturn/plugins" % (LOCALAPPDATA))
 
             if autodelrd.get() == 1:
                 os.remove(os.path.basename(pathfielddata.get()).split(".")[0] + ".rd")
             header.configure(text="Done compiling!", text_color="white")
 
-        elif not os.path.exists(os.getenv("LOCALAPPDATA")+"/JsonToRD/Radon.Repl.exe"):
+        elif not os.path.exists(LOCALAPPDATA+"/JsonToRD/Radon.Repl.exe"):
             if autodowncompiler.get() == 0:
                 header.configure(text="Compiler not found!", text_color="red")
                 global downloadcompiler
@@ -438,12 +470,12 @@ def rd_to_csp(rd):
 
 def downcompiler():
     header.configure(text="Downloading complier...", text_color="white")
-    get = requests.get(f"https://cdn.discordapp.com/attachments/1158794948670406746/1183848587805851708/Radon.zip")
+    get = RequestsGet(f"https://cdn.discordapp.com/attachments/1158794948670406746/1183848587805851708/Radon.zip")
     with open("Radon.Repl.zip", "wb") as writing:
         writing.write(get.content)
-    shutil.unpack_archive("Radon.Repl.zip", os.getcwd())
+    Shutil_Unpack("Radon.Repl.zip", os.getcwd())
     os.remove("Radon.Repl.zip")
-    shutil.move("Radon.Repl.exe", os.getenv("LOCALAPPDATA")+"/JsonToRD")
+    ShutilMove("Radon.Repl.exe", LOCALAPPDATA+"/JsonToRD")
     header.configure(text="Compiler downloaded!", text_color="white")
     try:
         downloadcompiler.forget()
@@ -462,7 +494,7 @@ def settingspage():
         checkboxframe1.destroy()
         checkboxframe2.destroy()
         tFrame.destroy()
-    except:
+    except Exception:
         pass
 
     app.geometry("550x120")
@@ -477,13 +509,13 @@ def settingspage():
     dropdownframe.pack()
 
     global appearance
-    appearancevar = tkinter.StringVar()
+    appearancevar = TkinterStringVar()
     appearance = customtkinter.CTkOptionMenu(dropdownframe, values=["System", "Dark", "Light"], variable=appearancevar, command=lambda appearancevar : customtkinter.set_appearance_mode(appearancevar))
     appearancevar.set("Choose Appearance Color")
     appearance.pack(padx=5, pady=20, side="left")
     
     global theme, themevar
-    themevar = tkinter.StringVar()
+    themevar = TkinterStringVar()
     theme = customtkinter.CTkOptionMenu(dropdownframe, values=["Blue", "Dark Blue", "Green"], variable=themevar, command=lambda themevar : defcolortheme(themevar))
     themevar.set("Choose Color Theme")
     theme.pack(padx=5, pady=20, side="right")
@@ -493,7 +525,7 @@ def mainpage():
     try:
         returntomain.destroy()
         dropdownframe.destroy()
-    except:
+    except Exception:
         pass
 
     app.geometry("550x285")
@@ -512,7 +544,7 @@ def mainpage():
     tInfo.pack(padx=5, pady=5, side="top")
 
     global tSkin
-    tSkinInp = tkinter.StringVar()
+    tSkinInp = TkinterStringVar()
     tSkin = customtkinter.CTkOptionMenu(tFrame, values=["Same as plugin", "Jennifer Walters", "Twyn (NOT WORKING RN)", "Lexa"], variable=tSkinInp)
     tSkin.set(prefs["tSkin"])
     tSkin.pack(padx=5, pady=5, side="bottom")
@@ -526,11 +558,11 @@ def mainpage():
     header.pack(padx=6, pady=9)
 
     jsonpathbuttonpic=customtkinter.CTkImage(Image.open(resource_path("resources\\icons\\upload.png")), size=(27, 27))
-    jsonpathbutton = customtkinter.CTkButton(info_frame, height=27, width=27, image=jsonpathbuttonpic, fg_color="transparent", text="", command=lambda : pathfielddata.set(easygui.fileopenbox()))
+    jsonpathbutton = customtkinter.CTkButton(info_frame, height=27, width=27, image=jsonpathbuttonpic, fg_color="transparent", text="", command=lambda : pathfielddata.set(fileopenbox(title="Choose a json file", filetypes=("JSON files", "*.json"))))
     jsonpathbutton.pack(padx=5, side='right', anchor="n")
 
     global pathfielddata
-    pathfielddata = tkinter.StringVar()
+    pathfielddata = TkinterStringVar()
     pathfield = customtkinter.CTkEntry(info_frame, width=350, height=35, textvariable=pathfielddata)
     pathfield.pack()
     pathfielddata.set("Input Path Here")
@@ -593,7 +625,6 @@ def mainpage():
     app.mainloop()
 
 
-
 def onexit():
     prefs["appearance"] = customtkinter.get_appearance_mode()
     prefs["deljson"] = autodeljson.get()
@@ -603,17 +634,19 @@ def onexit():
     prefs["autoall"] = automateall.get()
     prefs["tSkin"] = tSkin.get()
 
-    with open(os.getenv("LOCALAPPDATA")+"/JsonToRD/prefs", "wb") as savefile:
-        savefile.write(pickle.dumps(prefs))
+    with open(PathToPrefs, "wb") as savefile:
+        savefile.write(PickleDumps(prefs))
 
 
 if __name__ == "__main__":
-    global prefs
+    global prefs, PathToPrefs, LOCALAPPDATA
+    LOCALAPPDATA = os.getenv("LOCALAPPDATA").replace("\\", "/")
     prefs = {"appearance": "dark", "theme": "dark-blue", "deljson": "1", "delrd": "1", "compile": "1", "download": "1", "autoall": "1", "tSkin": "Same as plugin"}
+    PathToPrefs = LOCALAPPDATA+"/JsonToRD/prefs.txt"
 
-    if os.path.exists(os.getenv("LOCALAPPDATA")+"/JsonToRD/prefs"):
-        with open(os.getenv("LOCALAPPDATA")+"/JsonToRD/prefs", "rb") as file:
-            tempprefs = pickle.loads(file.read())
+    if os.path.exists(PathToPrefs):
+        with open(PathToPrefs, "rb") as file:
+            tempprefs = PickleLoads(file.read())
         for key in tempprefs:
             prefs[key] = tempprefs[key]
     
@@ -627,4 +660,4 @@ if __name__ == "__main__":
     
     mainpage()
 
-atexit.register(onexit)
+register(onexit)
