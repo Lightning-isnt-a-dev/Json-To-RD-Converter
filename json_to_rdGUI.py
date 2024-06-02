@@ -9,7 +9,7 @@ from atexit import register
 from pathlib import Path
 from zipfile import ZipFile
 
-# THIS IS A TEST DEV CHANGE
+# removed fr
 
 try:
     import customtkinter
